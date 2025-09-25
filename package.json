@@ -60,10 +60,6 @@
             "dev": "vite",
             "build": "vite build", 
             "predeploy": "npm run build",
-<<<<<<< Updated upstream
-             "deploy": "gh-pages -d build"
-=======
             "deploy": "gh-pages -d build"
->>>>>>> Stashed changes
       }
 }
