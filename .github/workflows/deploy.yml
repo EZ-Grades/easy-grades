@@ -36,3 +36,8 @@ jobs:
           vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
           working-directory: ./
           prod: true
+      - name: Set Environment Variables
+          run: |
+         echo "VITE_SUPABASE_URL=${{ secrets.VITE_SUPABASE_URL }}" >> $GITHUB_ENV
+         echo "VITE_SUPABASE_ANON_KEY=${{ secrets.VITE_SUPABASE_ANON_KEY }}" >> $GITHUB_ENV
+         echo "VITE_PERPLEXITY_API_KEY" = ${{ secrets.VITE_PERPLEXITY_API_KEY }}" >> $GITHUB_ENV
