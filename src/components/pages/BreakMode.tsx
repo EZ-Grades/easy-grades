@@ -47,9 +47,7 @@ interface StretchExercise {
   name: string;
   duration: number;
   description: string;
-  difficulty: 'Easy' | 'Medium' | 'Hard';
-  icon: any;
-  gradient: string;
+  difficulty: 'easy' | 'medium' | 'hard';
   instructions: string[];
   
 }
@@ -170,9 +168,7 @@ export function BreakMode() {
       name: 'Neck Tension Relief',
       duration: 30,
       description: 'Gentle neck movements to release built-up tension',
-      difficulty: 'Easy',
-      icon: RotateCcw,
-      gradient: 'from-purple-500 via-purple-600 to-indigo-600',
+      difficulty: 'easy',
       instructions: [
         'Sit up straight with shoulders relaxed',
         'Slowly roll your head in a circle',
@@ -185,10 +181,7 @@ export function BreakMode() {
       name: 'Shoulder Blade Squeeze',
       duration: 20,
       description: 'Release shoulder tension from long study sessions',
-      difficulty: 'Easy',
-      icon: Zap,
-            gradient: 'from-pink-500 via-rose-600 to-red-600',
-
+      difficulty: 'easy',
       instructions: [
         'Sit tall with arms at your sides',
         'Squeeze shoulder blades together',
@@ -201,10 +194,7 @@ export function BreakMode() {
       name: 'Spinal Twist',
       duration: 45,
       description: 'Improve spinal mobility and reduce back stiffness',
-      difficulty: 'Medium',
-      icon: Shuffle,
-            gradient: 'from-blue-500 via-cyan-600 to-teal-600',
-
+      difficulty: 'medium',
       instructions: [
         'Sit with feet flat on the floor',
         'Place one hand behind you',
@@ -217,10 +207,7 @@ export function BreakMode() {
       name: 'Eye Movement Exercise',
       duration: 15,
       description: 'Rest tired eyes from screen fatigue',
-      difficulty: 'Easy',
-      icon: Eye,
-            gradient: 'from-green-500 via-emerald-600 to-cyan-600',
-
+      difficulty: 'easy',
       instructions: [
         'Look far into the distance',
         'Focus on a near object',
@@ -233,10 +220,7 @@ export function BreakMode() {
       name: 'Wrist & Finger Stretches',
       duration: 25,
       description: 'Prevent repetitive strain from typing',
-      difficulty: 'Easy',
-      icon: Hand,
-            gradient: 'from-orange-500 via-amber-600 to-yellow-600',
-
+      difficulty: 'easy',
       instructions: [
         'Extend arms forward, palms down',
         'Gently pull fingers back with other hand',
@@ -249,10 +233,7 @@ export function BreakMode() {
       name: 'Hip Flexor Stretch',
       duration: 40,
       description: 'Counter the effects of prolonged sitting',
-      difficulty: 'Medium',
-      icon: Dumbbell,
-            gradient: 'from-indigo-500 via-purple-600 to-pink-600',
-
+      difficulty: 'medium',
       instructions: [
         'Stand and step one foot forward',
         'Lower into a lunge position',
