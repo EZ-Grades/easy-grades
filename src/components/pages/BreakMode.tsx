@@ -19,7 +19,10 @@ import {
   ChevronRight,
   RotateCcw,
   Dumbbell,
-  Timer
+  Timer,
+  Shuffle, 
+  Eye,
+  Hand
 } from 'lucide-react';
 import { GlassCard } from '../GlassCard';
 import { Button } from '../ui/button';
@@ -44,7 +47,9 @@ interface StretchExercise {
   name: string;
   duration: number;
   description: string;
-  difficulty: 'easy' | 'medium' | 'hard';
+  difficulty: 'Easy' | 'Medium' | 'Hard';
+  icon: any;
+  gradient: string;
   instructions: string[];
 }
 
@@ -164,7 +169,10 @@ export function BreakMode() {
       name: 'Neck Tension Relief',
       duration: 30,
       description: 'Gentle neck movements to release built-up tension',
-      difficulty: 'easy',
+      difficulty: 'Easy',
+      icon: RotateCcw,
+            gradient: 'from-purple-500 via-purple-600 to-indigo-600',
+
       instructions: [
         'Sit up straight with shoulders relaxed',
         'Slowly roll your head in a circle',
@@ -177,7 +185,10 @@ export function BreakMode() {
       name: 'Shoulder Blade Squeeze',
       duration: 20,
       description: 'Release shoulder tension from long study sessions',
-      difficulty: 'easy',
+      difficulty: 'Easy',
+      icon: Zap,
+            gradient: 'from-pink-500 via-rose-600 to-red-600',
+
       instructions: [
         'Sit tall with arms at your sides',
         'Squeeze shoulder blades together',
@@ -190,7 +201,10 @@ export function BreakMode() {
       name: 'Spinal Twist',
       duration: 45,
       description: 'Improve spinal mobility and reduce back stiffness',
-      difficulty: 'medium',
+      difficulty: 'Medium',
+      icon: Shuffle,
+            gradient: 'from-blue-500 via-cyan-600 to-teal-600',
+
       instructions: [
         'Sit with feet flat on the floor',
         'Place one hand behind you',
@@ -203,7 +217,10 @@ export function BreakMode() {
       name: 'Eye Movement Exercise',
       duration: 15,
       description: 'Rest tired eyes from screen fatigue',
-      difficulty: 'easy',
+      difficulty: 'Easy',
+      icon: Eye,
+            gradient: 'from-green-500 via-emerald-600 to-cyan-600',
+
       instructions: [
         'Look far into the distance',
         'Focus on a near object',
@@ -216,7 +233,10 @@ export function BreakMode() {
       name: 'Wrist & Finger Stretches',
       duration: 25,
       description: 'Prevent repetitive strain from typing',
-      difficulty: 'easy',
+      difficulty: 'Easy',
+      icon: Hand,
+            gradient: 'from-orange-500 via-amber-600 to-yellow-600',
+
       instructions: [
         'Extend arms forward, palms down',
         'Gently pull fingers back with other hand',
@@ -229,7 +249,10 @@ export function BreakMode() {
       name: 'Hip Flexor Stretch',
       duration: 40,
       description: 'Counter the effects of prolonged sitting',
-      difficulty: 'medium',
+      difficulty: 'Medium',
+      icon: Dumbbell,
+            gradient: 'from-indigo-500 via-purple-600 to-pink-600',
+
       instructions: [
         'Stand and step one foot forward',
         'Lower into a lunge position',
@@ -530,97 +553,113 @@ export function BreakMode() {
 
         {/* Stretch Exercises Section */}
         <motion.div
-          className="mt-12"
-          initial={{ opacity: 0, y: 30 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8, delay: 0.8 }}
+  className="mt-12"
+  initial={{ opacity: 0, y: 30 }}
+  animate={{ opacity: 1, y: 0 }}
+  transition={{ duration: 0.8, delay: 0.8 }}
+>
+  {/* Section Header */}
+  <div className="text-center mb-10">
+    <h2 className="text-3xl font-bold text-gradient-secondary mb-2">
+      Stretch & Movement
+    </h2>
+    <p className="text-muted-foreground max-w-xl mx-auto">
+      Combat study fatigue with short, targeted exercises — designed to refresh your body and mind.
+    </p>
+    <div className="mt-4 h-1 w-32 mx-auto 
+      bg-gradient-to-r from-emerald-400 to-teal-500 
+      dark:from-emerald-600 dark:to-teal-700 
+      rounded-full shadow-md shadow-emerald-500/20" />
+  </div>
+
+  {/* Grid of Exercises */}
+  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+    {stretchExercises.map((exercise, index) => (
+      <motion.div
+        key={exercise.id}
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.6, delay: index * 0.1 }}
+        whileHover={{ scale: 1.03, y: -6 }}
+        whileTap={{ scale: 0.97 }}
+        className="relative group"
+      >
+        <GlassCard className="h-full p-6 relative overflow-hidden backdrop-blur-lg cursor-pointer 
+          transition-all duration-300 border border-border/50 
+          hover:shadow-xl hover:shadow-emerald-500/20 dark:hover:shadow-emerald-700/30"
         >
-          <div className="text-center mb-8">
-            <h2 className="text-3xl font-bold text-gradient-secondary mb-2">
-              Stretch & Movement
-            </h2>
-            <p className="text-muted-foreground">
-              Combat study fatigue with targeted exercises
-            </p>
-          </div>
+          {/* Background Gradient */}
+          <div className="absolute inset-0 bg-gradient-to-br 
+            from-emerald-400/60 to-teal-500/60 
+            dark:from-emerald-600/50 dark:to-teal-700/50 
+            opacity-10 group-hover:opacity-20 
+            transition-all duration-300" />
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {stretchExercises.map((exercise, index) => (
-              <motion.div
-                key={exercise.id}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5, delay: index * 0.1 }}
-                className="relative group"
-              >
-                <motion.div
-                  whileHover={{ scale: 1.02, y: -5 }}
-                  whileTap={{ scale: 0.98 }}
-                  className="h-full"
-                >
-                  <GlassCard className="h-full p-6 relative overflow-hidden cursor-pointer transition-all duration-300 hover:shadow-xl hover:shadow-black/10 dark:hover:shadow-black/30">
-                    {/* Background Gradient */}
-                    <div className="absolute inset-0 bg-gradient-to-br from-emerald-500 to-teal-600 opacity-5 group-hover:opacity-10 transition-opacity duration-300" />
-                    
-                    {/* Content */}
-                    <div className="relative z-10 h-full flex flex-col">
-                      {/* Header */}
-                      <div className="flex items-start justify-between mb-4">
-                        <div className="p-3 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 text-white shadow-lg">
-                          <Dumbbell className="w-6 h-6" />
-                        </div>
-                        <div className="flex flex-col items-end gap-2">
-                          <Badge 
-                            variant="outline" 
-                            className={`text-xs font-medium ${getDifficultyColor(exercise.difficulty)}`}
-                          >
-                            {exercise.difficulty}
-                          </Badge>
-                          <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                            <Timer className="w-3 h-3" />
-                            <span>{exercise.duration}s</span>
-                          </div>
-                        </div>
+          {/* Content */}
+          <div className="relative z-10 h-full flex flex-col">
+            {/* Header */}
+                    <div className="flex items-start justify-between mb-4">
+                      <div className={`p-3 rounded-xl bg-gradient-to-br ${exercise.gradient} text-white shadow-lg`}>
+                        <exercise.icon className="w-6 h-6" />
                       </div>
-
-                      {/* Exercise Info */}
-                      <div className="flex-1 space-y-3">
-                        <h3 className="text-lg font-semibold text-foreground line-clamp-1">
-                          {exercise.name}
-                        </h3>
-                        <p className="text-sm text-muted-foreground line-clamp-2">
-                          {exercise.description}
-                        </p>
-                        
-                        {/* Instructions Preview */}
-                        <div className="space-y-1">
-                          {exercise.instructions.slice(0, 2).map((instruction, idx) => (
-                            <div key={idx} className="flex items-center gap-2 text-xs text-muted-foreground">
-                              <div className="w-1 h-1 rounded-full bg-current" />
-                              <span className="line-clamp-1">{instruction}</span>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-
-                      {/* Footer */}
-                      <div className="pt-4 border-t border-border/50">
-                        <Button
-                          onClick={() => startExercise(exercise)}
-                          size="sm"
-                          className="w-full bg-gradient-to-r from-emerald-500 to-teal-600 text-white border-0 hover:shadow-lg transition-all duration-300"
+                      <div className="flex flex-col items-end gap-2">
+                        <Badge 
+                          variant="outline" 
+                          className={`text-xs font-medium ${getDifficultyColor(exercise.difficulty)}`}
                         >
-                          <Play className="w-3 h-3 mr-1" />
-                          Start Exercise
-                        </Button>
+                          {exercise.difficulty}
+                        </Badge>
+                        <span className={`text-xs font-medium ${getCategoryColor(exercise.category)}`}>
+                          {exercise.category}
+                        </span>
                       </div>
-                    </div>
-                  </GlassCard>
-                </motion.div>
-              </motion.div>
-            ))}
+            </div>
+            
+            {/* Exercise Info */}
+            <div className="flex-1 space-y-3">
+              <h3 className="text-lg font-semibold text-foreground line-clamp-1">
+                {exercise.name}
+              </h3>
+              <p className="text-sm text-muted-foreground line-clamp-2">
+                {exercise.description}
+              </p>
+
+              {/* Instructions Preview */}
+              <div className="space-y-1">
+                {exercise.instructions.slice(0, 2).map((instruction, idx) => (
+                  <div 
+                    key={idx} 
+                    className="flex items-center gap-2 text-xs text-muted-foreground"
+                  >
+                    <div className="w-1 h-1 rounded-full bg-current" />
+                    <span className="line-clamp-1">{instruction}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div className="pt-4 border-t border-border/50">
+              <Button
+                onClick={() => startExercise(exercise)}
+                size="sm"
+                className="w-full bg-gradient-to-r from-emerald-400 to-teal-500 
+                  dark:from-emerald-600 dark:to-teal-700 
+                  text-white border-0 hover:shadow-lg hover:shadow-emerald-500/30 
+                  transition-all duration-300"
+              >
+                <Play className="w-3 h-3 mr-1" />
+                Start Exercise
+              </Button>
+            </div>
           </div>
-        </motion.div>
+        </GlassCard>
+      </motion.div>
+    ))}
+  </div>
+</motion.div>
+
+
 
         {/* Breathing Exercise Section */}
         <motion.div
