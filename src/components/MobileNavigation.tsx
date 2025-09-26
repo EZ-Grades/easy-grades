@@ -31,6 +31,7 @@ const navItems = [
   { id: 'break', label: 'Break Mode', icon: Coffee },
   { id: 'focus', label: 'Focus Mode', icon: Focus },
   { id: 'studyhub', label: 'Study Hub', icon: BookOpen },
+  { id: 'about', label: 'About Us', icon: Heart},
   { id: 'settings', label: 'Settings', icon: Settings },
 ];
 
