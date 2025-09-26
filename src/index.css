@@ -5498,10 +5498,10 @@
   --card-foreground: #2a2a2a;
   --popover: #fff;
   --popover-foreground: #2a2a2a;
-  --primary: linear-gradient(135deg, #5bb7c7, #185c68);
+  --primary: linear-gradient(135deg, #709ea7, #347985);
   --primary-solid: #7d4ae1;
   --primary-foreground: #fff;
-  --secondary: linear-gradient(135deg, #7ea49f, #2b7d7d);
+  --secondary: linear-gradient(135deg, #376059, #5c9a9a);
   --secondary-solid: #3ab0a0;
   --secondary-foreground: #fff;
   --highlight: linear-gradient(135deg, #ffcb6b, #e6a157);
@@ -5524,7 +5524,7 @@
   --font-weight-normal: 400;
   --ring: #7d4ae14d;
   --chart-1: #7d4ae1;
-  --chart-2: #70c2b7;
+  --chart-2: #84b7b0;
   --chart-3: #ffcb6b;
   --chart-4: #e76f51;
   --chart-5: #9b7ee8;

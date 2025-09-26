@@ -15,7 +15,7 @@ import {
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
 import { Badge } from "../ui/badge";
-import { EZGradesLogo } from '../EZGradesLogo';
+import  Logo  from '../../assets/Logo.png';
 
 export function AboutUs() {
   const features = [
@@ -93,9 +93,13 @@ export function AboutUs() {
                 ease: "easeInOut" 
               }}
             >
-              <div className="w-16 h-16 rounded-2xl glass-card flex items-center justify-center glow-primary">
-                <EZGradesLogo size="lg" animated={false} />
-              </div>
+              <div className="mb-8">
+                      <img
+                        src={Logo}
+                        alt="App Logo"
+                        className="w-20 h-20 rounded-full object-cover border-2 border-gray-700 shadow-md"
+                      />
+                        </div>
             </motion.div>
             <h1 className="text-5xl font-bold text-gradient-primary">About EZ Grades</h1>
           </div>
