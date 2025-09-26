@@ -51,6 +51,7 @@ interface StretchExercise {
   icon: any;
   gradient: string;
   instructions: string[];
+  
 }
 
 export function BreakMode() {
@@ -171,8 +172,7 @@ export function BreakMode() {
       description: 'Gentle neck movements to release built-up tension',
       difficulty: 'Easy',
       icon: RotateCcw,
-            gradient: 'from-purple-500 via-purple-600 to-indigo-600',
-
+      gradient: 'from-purple-500 via-purple-600 to-indigo-600',
       instructions: [
         'Sit up straight with shoulders relaxed',
         'Slowly roll your head in a circle',
@@ -643,8 +643,7 @@ export function BreakMode() {
               <Button
                 onClick={() => startExercise(exercise)}
                 size="sm"
-                className="w-full bg-gradient-to-r from-emerald-400 to-teal-500 
-                  dark:from-emerald-600 dark:to-teal-700 
+                className="w-full bg-gradient-to-r from-indigo-500 via-purple-600 to-pink-600 
                   text-white border-0 hover:shadow-lg hover:shadow-emerald-500/30 
                   transition-all duration-300"
               >
