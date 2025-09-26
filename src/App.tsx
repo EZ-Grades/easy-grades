@@ -17,12 +17,12 @@ import { StudyHubAuthGuard } from './components/auth/StudyHubAuthGuard';
 import { AuthCallback } from './components/auth/AuthCallback';
 import { SidebarProvider, SidebarInset } from './components/ui/sidebar';
 import { ThemeToggle } from './components/ThemeToggle';
-import { EZGradesLogo } from './components/EZGradesLogo';
 import { useIsMobile } from './components/ui/use-mobile';
 import { useAuth } from './hooks/useAuth';
-import { toast } from 'sonner@2.0.3';
+import { toast } from 'sonner';
 
 import { ComprehensiveTest } from './components/ComprehensiveTest';
+
 
 window.addEventListener('unhandledrejection', (event) => {
   const message = event.reason?.message || String(event.reason);
@@ -254,8 +254,7 @@ export default function App() {
             />
             <div className="absolute inset-0 flex items-center justify-center">
               <div className="w-12 h-12 rounded-full glass-card flex items-center justify-center glow-primary">
-                <EZGradesLogo size="lg" animated={false} />
-              </div>
+             </div>
             </div>
           </div>
           <div className="space-y-2">

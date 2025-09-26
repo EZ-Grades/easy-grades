@@ -67,33 +67,37 @@ const riddles: Riddle[] = [
 ];
 
 export function RiddlesGame({ onComplete }: RiddlesGameProps) {
-  const [currentRiddleIndex, setCurrentRiddleIndex] = useState<number>(0);
-  const [usedRiddles, setUsedRiddles] = useState<number[]>([]);
+  const [currentRiddleIndex, setCurrentRiddleIndex] = useState(0);
   const [selectedAnswer, setSelectedAnswer] = useState<string>('');
   const [showResult, setShowResult] = useState(false);
   const [score, setScore] = useState(0);
   const [showHint, setShowHint] = useState(false);
   const [gameComplete, setGameComplete] = useState(false);
 
-  const pickNewRiddleIndex = (): number | undefined => {
-    const availableIndexes = riddles
-      .map((_, i) => i)
-      .filter(i => !usedRiddles.includes(i));
+  const currentRiddle = riddles[currentRiddleIndex];
+  const isCorrect = selectedAnswer === currentRiddle.answer;
 
-    if (availableIndexes.length === 0) return undefined;
+  useEffect(() => {
+    // Reset states when riddle changes
+    setSelectedAnswer('');
+    setShowResult(false);
+    setShowHint(false);
+  }, [currentRiddleIndex]);
 
-    const randomIndex = availableIndexes[Math.floor(Math.random() * availableIndexes.length)];
-    setUsedRiddles([...usedRiddles, randomIndex]);
-    return randomIndex;
+  const handleAnswerSelect = (answer: string) => {
+    if (showResult) return;
+    
+    setSelectedAnswer(answer);
+    setShowResult(true);
+    
+    if (answer === currentRiddle.answer) {
+      setScore(score + 10);
+    }
   };
 
   const nextRiddle = () => {
-    const nextIndex = pickNewRiddleIndex();
-    if (nextIndex !== undefined) {
-      setCurrentRiddleIndex(nextIndex);
-      setSelectedAnswer('');
-      setShowResult(false);
-      setShowHint(false);
+    if (currentRiddleIndex < riddles.length - 1) {
+      setCurrentRiddleIndex(currentRiddleIndex + 1);
     } else {
       setGameComplete(true);
       setTimeout(onComplete, 1500);
@@ -101,32 +105,13 @@ export function RiddlesGame({ onComplete }: RiddlesGameProps) {
   };
 
   const resetGame = () => {
-    setUsedRiddles([]);
-    const firstIndex = Math.floor(Math.random() * riddles.length);
-    setCurrentRiddleIndex(firstIndex);
+    setCurrentRiddleIndex(0);
     setSelectedAnswer('');
     setShowResult(false);
     setScore(0);
     setShowHint(false);
     setGameComplete(false);
-    setUsedRiddles([firstIndex]);
   };
-
-  const currentRiddle = riddles[currentRiddleIndex];
-  const isCorrect = selectedAnswer === currentRiddle.answer;
-
-  const handleAnswerSelect = (answer: string) => {
-    if (showResult) return;
-    setSelectedAnswer(answer);
-    setShowResult(true);
-    if (answer === currentRiddle.answer) setScore(score + 10);
-  };
-
-  useEffect(() => {
-    // Initialize first riddle randomly
-    resetGame();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
 
   return (
     <GlassCard className="p-6 max-w-2xl mx-auto">
@@ -134,7 +119,7 @@ export function RiddlesGame({ onComplete }: RiddlesGameProps) {
         <h2 className="text-xl font-semibold mb-2">Brain Riddles</h2>
         <p className="text-muted-foreground mb-2">Test your wit with these challenging riddles</p>
         <div className="flex items-center justify-center gap-4 text-sm">
-          <span>Riddle {usedRiddles.length}/{riddles.length}</span>
+          <span>Riddle {currentRiddleIndex + 1}/{riddles.length}</span>
           <span>Score: {score}/{riddles.length * 10}</span>
         </div>
       </div>
@@ -142,8 +127,10 @@ export function RiddlesGame({ onComplete }: RiddlesGameProps) {
       {/* Current Riddle */}
       <div className="mb-8">
         <div className="glass-card p-6 mb-6">
-          <h3 className="text-lg font-medium text-center mb-4">{currentRiddle.question}</h3>
-
+          <h3 className="text-lg font-medium text-center mb-4">
+            {currentRiddle.question}
+          </h3>
+          
           {/* Hint */}
           {showHint && (
             <motion.div
@@ -155,7 +142,9 @@ export function RiddlesGame({ onComplete }: RiddlesGameProps) {
                 <Lightbulb className="w-5 h-5 text-yellow-500 flex-shrink-0 mt-0.5" />
                 <div>
                   <p className="text-sm font-medium text-yellow-500 mb-1">Hint:</p>
-                  <p className="text-sm text-yellow-600 dark:text-yellow-400">{currentRiddle.hint}</p>
+                  <p className="text-sm text-yellow-600 dark:text-yellow-400">
+                    {currentRiddle.hint}
+                  </p>
                 </div>
               </div>
             </motion.div>
@@ -164,16 +153,22 @@ export function RiddlesGame({ onComplete }: RiddlesGameProps) {
 
         {/* Answer Options */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-6">
-          {currentRiddle.options.map((option, idx) => {
+          {currentRiddle.options.map((option, index) => {
             let buttonClass = 'glass-card border-border hover:glow-primary';
+            
             if (showResult) {
-              if (option === currentRiddle.answer) buttonClass = 'bg-green-500/20 border-green-500 text-green-500 glow-green';
-              else if (option === selectedAnswer && option !== currentRiddle.answer) buttonClass = 'bg-red-500/20 border-red-500 text-red-500';
-              else buttonClass = 'glass-card border-border opacity-50';
+              if (option === currentRiddle.answer) {
+                buttonClass = 'bg-green-500/20 border-green-500 text-green-500 glow-green';
+              } else if (option === selectedAnswer && option !== currentRiddle.answer) {
+                buttonClass = 'bg-red-500/20 border-red-500 text-red-500';
+              } else {
+                buttonClass = 'glass-card border-border opacity-50';
+              }
             }
+
             return (
               <motion.button
-                key={idx}
+                key={index}
                 onClick={() => handleAnswerSelect(option)}
                 disabled={showResult}
                 className={`p-4 rounded-lg border-2 transition-all duration-300 ${buttonClass}`}
@@ -218,7 +213,8 @@ export function RiddlesGame({ onComplete }: RiddlesGameProps) {
           <CheckCircle className="w-12 h-12 text-green-500 mx-auto mb-2" />
           <h3 className="text-lg font-semibold text-green-500">All Riddles Complete!</h3>
           <p className="text-muted-foreground">
-            Final Score: {score}/{riddles.length * 10} ({Math.round((score / (riddles.length * 10)) * 100)}%)
+            Final Score: {score}/{riddles.length * 10} 
+            ({Math.round((score / (riddles.length * 10)) * 100)}%)
           </p>
         </motion.div>
       )}
@@ -226,18 +222,30 @@ export function RiddlesGame({ onComplete }: RiddlesGameProps) {
       {/* Controls */}
       <div className="flex gap-3 justify-center">
         {!showResult && !gameComplete && (
-          <LuxuryButton variant="outline" onClick={() => setShowHint(!showHint)} icon={<Lightbulb className="w-4 h-4" />}>
+          <LuxuryButton
+            variant="outline"
+            onClick={() => setShowHint(!showHint)}
+            icon={<Lightbulb className="w-4 h-4" />}
+          >
             {showHint ? 'Hide Hint' : 'Show Hint'}
           </LuxuryButton>
         )}
-
+        
         {showResult && !gameComplete && (
-          <LuxuryButton variant="primary" onClick={nextRiddle} icon={<ArrowRight className="w-4 h-4" />}>
+          <LuxuryButton
+            variant="primary"
+            onClick={nextRiddle}
+            icon={<ArrowRight className="w-4 h-4" />}
+          >
             Next Riddle
           </LuxuryButton>
         )}
-
-        <LuxuryButton variant="outline" onClick={resetGame} icon={<RotateCcw className="w-4 h-4" />}>
+        
+        <LuxuryButton
+          variant="outline"
+          onClick={resetGame}
+          icon={<RotateCcw className="w-4 h-4" />}
+        >
           New Game
         </LuxuryButton>
       </div>

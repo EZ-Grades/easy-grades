@@ -5498,10 +5498,10 @@
   --card-foreground: #2a2a2a;
   --popover: #fff;
   --popover-foreground: #2a2a2a;
-  --primary: linear-gradient(135deg, #7d4ae1, #5b33c9);
+  --primary: linear-gradient(135deg, #5bb7c7, #185c68);
   --primary-solid: #7d4ae1;
   --primary-foreground: #fff;
-  --secondary: linear-gradient(135deg, #3ab0a0, #2b7d7d);
+  --secondary: linear-gradient(135deg, #7ea49f, #2b7d7d);
   --secondary-solid: #3ab0a0;
   --secondary-foreground: #fff;
   --highlight: linear-gradient(135deg, #ffcb6b, #e6a157);
@@ -5548,7 +5548,7 @@
   --card-foreground: #e8e8e8;
   --popover: #1c2a3d;
   --popover-foreground: #e8e8e8;
-  --primary: linear-gradient(135deg, #5b6ee1, #3b4fc9);
+  --primary: linear-gradient(135deg,  #5bb7c7, #185c68);
   --primary-solid: #5b6ee1;
   --primary-foreground: #fff;
   --secondary: linear-gradient(135deg, #2ed7b0, #1f9e8f);

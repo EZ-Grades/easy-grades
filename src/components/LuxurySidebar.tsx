@@ -13,7 +13,7 @@ import {
   User,
   TestTube
 } from 'lucide-react';
-import { EZGradesLogo } from './EZGradesLogo';
+import Logo from "../assets/Logo.png";
 import {
   Sidebar as SidebarBase,
   SidebarContent,
@@ -87,9 +87,14 @@ export function CustomSidebar({ currentPage, onPageChange, user, onLogout }: Sid
           className="flex items-center gap-3"
           whileHover={{ scale: 1.02 }}
         >
-          <div className="w-10 h-10 rounded-xl glass-card flex items-center justify-center glow-primary">
-            <EZGradesLogo size="lg" animated={true} />
+           <div className="mb-8">
+        <img
+          src={Logo}
+          alt="App Logo"
+          className="w-20 h-20 rounded-full object-cover border-2 border-gray-700 shadow-md"
+        />
           </div>
+          
           {state === 'expanded' && (
             <motion.div
               initial={{ opacity: 0, x: -10 }}
