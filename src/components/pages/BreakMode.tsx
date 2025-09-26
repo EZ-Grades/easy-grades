@@ -44,7 +44,7 @@ interface StretchExercise {
   name: string;
   duration: number;
   description: string;
-  difficulty: 'easy' | 'medium' | 'hard';
+  difficulty: 'Easy' | 'Medium' | 'Hard';
   instructions: string[];
 }
 
@@ -164,7 +164,7 @@ export function BreakMode() {
       name: 'Neck Tension Relief',
       duration: 30,
       description: 'Gentle neck movements to release built-up tension',
-      difficulty: 'easy',
+      difficulty: 'Easy',
       instructions: [
         'Sit up straight with shoulders relaxed',
         'Slowly roll your head in a circle',
@@ -177,7 +177,7 @@ export function BreakMode() {
       name: 'Shoulder Blade Squeeze',
       duration: 20,
       description: 'Release shoulder tension from long study sessions',
-      difficulty: 'easy',
+      difficulty: 'Easy',
       instructions: [
         'Sit tall with arms at your sides',
         'Squeeze shoulder blades together',
@@ -190,7 +190,7 @@ export function BreakMode() {
       name: 'Spinal Twist',
       duration: 45,
       description: 'Improve spinal mobility and reduce back stiffness',
-      difficulty: 'medium',
+      difficulty: 'Medium',
       instructions: [
         'Sit with feet flat on the floor',
         'Place one hand behind you',
@@ -203,7 +203,7 @@ export function BreakMode() {
       name: 'Eye Movement Exercise',
       duration: 15,
       description: 'Rest tired eyes from screen fatigue',
-      difficulty: 'easy',
+      difficulty: 'Easy',
       instructions: [
         'Look far into the distance',
         'Focus on a near object',
@@ -216,7 +216,7 @@ export function BreakMode() {
       name: 'Wrist & Finger Stretches',
       duration: 25,
       description: 'Prevent repetitive strain from typing',
-      difficulty: 'easy',
+      difficulty: 'Easy',
       instructions: [
         'Extend arms forward, palms down',
         'Gently pull fingers back with other hand',
@@ -229,7 +229,7 @@ export function BreakMode() {
       name: 'Hip Flexor Stretch',
       duration: 40,
       description: 'Counter the effects of prolonged sitting',
-      difficulty: 'medium',
+      difficulty: 'Medium',
       instructions: [
         'Stand and step one foot forward',
         'Lower into a lunge position',
