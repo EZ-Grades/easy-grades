@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
 import { User } from 'lucide-react';
 import { ThemeToggle } from './ThemeToggle';
-import  Logo  from '../assets/Logo.png';
+import { EZGradesLogo } from './EZGradesLogo';
 
 interface User {
   id: string;
@@ -45,20 +45,16 @@ export function MobileTopNavigation({ user }: MobileTopNavigationProps) {
       transition={{ duration: 0.3, ease: 'easeInOut' }}
       className="fixed top-0 left-0 right-0 z-40 md:hidden"
     >
-      <div className="glass-card mx-4 mt-4 rounded-2xl border-0">
-        <div className="flex items-center justify-between p-4">
+      <div className="glass-card mx-3 mt-3 rounded-2xl border-0 shadow-lg">
+        <div className="flex items-center justify-between px-4 py-3">
           {/* Logo */}
           <motion.div 
             className="flex items-center gap-3"
             whileHover={{ scale: 1.02 }}
           >
-            <div className="mb-8">
-        <img
-          src={Logo}
-          alt="App Logo"
-          className="w-20 h-20 rounded-full object-cover border-2 border-gray-700 shadow-md"
-        />
-          </div>
+            <div className="w-8 h-8 rounded-lg glass-card flex items-center justify-center glow-primary">
+              <EZGradesLogo size="md" animated={true} />
+            </div>
             <span className="text-gradient-primary font-semibold text-lg">EZ Grades</span>
           </motion.div>
 
