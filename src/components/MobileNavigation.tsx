@@ -27,12 +27,12 @@ interface MobileNavigationProps {
 }
 
 const navItems = [
-  { id: 'dashboard', label: 'Dashboard', icon: Home },
-  { id: 'break', label: 'Break Mode', icon: Coffee },
-  { id: 'focus', label: 'Focus Mode', icon: Focus },
-  { id: 'studyhub', label: 'Study Hub', icon: BookOpen },
-  { id: 'about', label: 'About Us', icon: Heart},
-  { id: 'settings', label: 'Settings', icon: Settings },
+  { id: 'dashboard', label: '', icon: Home },
+  { id: 'break', label: '', icon: Coffee },
+  { id: 'focus', label: '', icon: Focus },
+  { id: 'studyhub', label: '', icon: BookOpen },
+  { id: 'about', label: '', icon: Heart},
+  { id: 'settings', label: '', icon: Settings },
 ];
 
 export function MobileNavigation({ currentPage, onPageChange, user, onLogout }: MobileNavigationProps) {
@@ -59,7 +59,7 @@ export function MobileNavigation({ currentPage, onPageChange, user, onLogout }: 
                   key={item.id}
                   onClick={() => handleItemClick(item.id)}
                   className={`
-                    relative p-2.5 rounded-xl transition-all duration-300 flex flex-col items-center min-w-0
+                    relative p-4 rounded-xl transition-all duration-300 flex flex-col items-center min-w-0
                     ${isActive 
                       ? 'gradient-primary text-white shadow-lg glow-primary' 
                       : 'text-foreground/70 hover:text-foreground hover:bg-white/10 dark:hover:bg-white/5'
