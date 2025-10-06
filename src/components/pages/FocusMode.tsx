@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { motion } from 'motion/react';
+import { motion } from 'framer-motion';
 import { 
   Shield, 
   Volume2, 
@@ -22,17 +22,15 @@ import { FocusSession } from '../FocusSession';
 
 import { useAuth } from '../../hooks/useAuth';
 import backendService from '../../services/backendService';
-import { toast } from 'sonner@2.0.3';
+import { toast } from 'sonner';
 
 interface AmbientSound {
   id: string;
   name: string;
-  volume: number;
+  volume: number; // UI: 0 - 100
   enabled: boolean;
   icon: string;
 }
-
-
 
 export function FocusMode() {
   const [focusTimer, setFocusTimer] = useState(50 * 60); // 50 minutes
@@ -79,7 +77,7 @@ export function FocusMode() {
         setLoading(true);
         
         // Define fallback data at the top level
-        const fallbackSounds = [
+        const fallbackSounds: AmbientSound[] = [
           { id: '1', name: 'Rain', volume: 50, enabled: false, icon: '🌧️' },
           { id: '2', name: 'Forest', volume: 30, enabled: true, icon: '🌲' },
           { id: '3', name: 'Coffee Shop', volume: 40, enabled: false, icon: '☕' },
@@ -110,34 +108,39 @@ export function FocusMode() {
         
         // Try to load ambient sounds from backend first
         try {
-          const soundsResult = await backendService.ambientSounds.getAllAmbientSounds();
-          if (soundsResult.data && soundsResult.data.length > 0) {
-            const mappedSounds = soundsResult.data.map(sound => ({
-              id: sound.id,
-              name: sound.name,
-              volume: Math.round((sound.volume || 0.5) * 100),
-              enabled: false,
-              icon: getIconForSound(sound.name)
-            }));
+          const soundsResult = await backendService?.ambientSounds?.getAllAmbientSounds?.();
+          if (soundsResult?.data && soundsResult.data.length > 0) {
+            const mappedSounds = soundsResult.data.map((sound: any) => {
+              // Assume backend returns 0..1 for volume (if it's already 0..100 we clamp)
+              const raw = sound.volume ?? 0.5;
+              const normalized = raw > 1 ? Math.min(100, Math.round(raw)) : Math.min(100, Math.round(raw * 100));
+              return {
+                id: sound.id,
+                name: sound.name,
+                volume: normalized,
+                enabled: false,
+                icon: sound.icon || getIconForSound(sound.name)
+              };
+            });
             setAmbientSounds(mappedSounds);
           } else {
             setAmbientSounds(fallbackSounds);
           }
         } catch (error) {
-          console.warn('Ambient sounds table not available, using fallback data');
+          console.warn('Ambient sounds table not available, using fallback data', error);
           setAmbientSounds(fallbackSounds);
         }
 
         // Try to load ambience modes from backend
         try {
-          const modesResult = await backendService.ambienceModes.getAllAmbienceModes();
-          if (modesResult.data && modesResult.data.length > 0) {
+          const modesResult = await backendService?.ambienceModes?.getAllAmbienceModes?.();
+          if (modesResult?.data && modesResult.data.length > 0) {
             setAmbienceModes(modesResult.data);
           } else {
             setAmbienceModes(fallbackModes);
           }
         } catch (error) {
-          console.warn('Ambience modes table not available, using fallback data');
+          console.warn('Ambience modes table not available, using fallback data', error);
           setAmbienceModes(fallbackModes);
         }
 
@@ -145,38 +148,55 @@ export function FocusMode() {
         if (user) {
           try {
             // Load user ambient settings
-            const userSoundsResult = await backendService.ambientSounds.getUserAmbientSettings(user.id);
-            if (userSoundsResult.data && userSoundsResult.data.length > 0) {
-              const userSounds = userSoundsResult.data.map(setting => ({
-                id: setting.ambient_sound_id,
-                name: setting.ambient_sounds.name,
-                volume: setting.volume,
-                enabled: setting.enabled,
-                icon: setting.ambient_sounds.icon || '🔊'
-              }));
-              setAmbientSounds(userSounds);
+            try {
+              const userSoundsResult = await backendService?.ambientSounds?.getUserAmbientSettings?.(user.id);
+              if (userSoundsResult?.data && userSoundsResult.data.length > 0) {
+                const userSounds = userSoundsResult.data.map((setting: any) => {
+                  const raw = setting.volume ?? 0.5;
+                  const normalized = raw > 1 ? Math.min(100, Math.round(raw)) : Math.min(100, Math.round(raw * 100));
+                  return {
+                    id: setting.ambient_sound_id,
+                    name: setting.ambient_sounds?.name ?? 'Sound',
+                    volume: normalized,
+                    enabled: !!setting.enabled,
+                    icon: setting.ambient_sounds?.icon || getIconForSound(setting.ambient_sounds?.name)
+                  };
+                });
+                setAmbientSounds(userSounds);
+              }
+            } catch (error) {
+              console.warn('Error loading user ambient settings, using defaults', error);
             }
 
             // Load distraction blocker settings
-            const userSettingsResult = await backendService.distractionBlocker.getUserSettings(user.id);
-            if (userSettingsResult.data) {
-              setDistractionBlockEnabled(userSettingsResult.data.distraction_block_enabled);
-              setShowBlockedSites(userSettingsResult.data.show_blocked_sites);
+            try {
+              const userSettings = await backendService?.distractionBlocker?.getUserSettings?.(user.id);
+              if (userSettings?.data) {
+                setDistractionBlockEnabled(!!userSettings.data.distraction_block_enabled);
+                setShowBlockedSites(!!userSettings.data.show_blocked_sites);
+              }
+            } catch (error) {
+              console.warn('Error loading distraction blocker settings', error);
             }
 
             // Load blocked sites
-            const blockedSitesResult = await backendService.distractionBlocker.getBlockedSites(user.id);
-            if (blockedSitesResult.data && blockedSitesResult.data.length > 0) {
-              setBlockedSites(blockedSitesResult.data.map(site => site.url));
-            } else {
+            try {
+              const blockedSitesResult = await backendService?.distractionBlocker?.getBlockedSites?.(user.id);
+              if (blockedSitesResult?.data && blockedSitesResult.data.length > 0) {
+                setBlockedSites(blockedSitesResult.data.map((site: any) => site.url));
+              } else {
+                setBlockedSites(fallbackBlockedSites);
+              }
+            } catch (error) {
+              console.warn('Error loading blocked sites, using fallback', error);
               setBlockedSites(fallbackBlockedSites);
             }
 
             // Load user background preference
             try {
-              const userSettingsResult = await backendService.userSettings.getUserSettings(user.id);
-              if (userSettingsResult.data?.focus_background) {
-                setCustomBackground(userSettingsResult.data.focus_background);
+              const userSettingsRes = await backendService?.userSettings?.getUserSettings?.(user.id);
+              if (userSettingsRes?.data?.focus_background) {
+                setCustomBackground(userSettingsRes.data.focus_background);
               }
             } catch (error) {
               console.error('Error loading user background preference:', error);
@@ -188,7 +208,7 @@ export function FocusMode() {
         } else {
           setBlockedSites(fallbackBlockedSites);
         }
-      } catch (error) {
+      } catch (error: any) {
         console.error('Error loading focus mode data:', error);
         // Don't show error toast for expected missing tables
         if (!error?.message?.includes('not found') && !error?.message?.includes('table')) {
@@ -213,30 +233,7 @@ export function FocusMode() {
     }
   }, [focusDuration, isTimerRunning]);
 
-  useEffect(() => {
-    let interval: NodeJS.Timeout;
-    if (isTimerRunning && focusTimer > 0) {
-      interval = setInterval(() => {
-        setFocusTimer((prev) => {
-          const newTime = prev - 1;
-          
-          // Update session progress in backend if user is logged in
-          if (user && currentSessionId) {
-            const completedMinutes = Math.floor((totalFocusTime - newTime) / 60);
-            backendService.focusSessions.updateSessionProgress(currentSessionId, completedMinutes)
-              .catch(error => console.error('Error updating session progress:', error));
-          }
-          
-          return newTime;
-        });
-      }, 1000);
-    } else if (isTimerRunning && focusTimer === 0) {
-      // Session completed
-      handleSessionComplete();
-    }
-    return () => clearInterval(interval);
-  }, [isTimerRunning, focusTimer, user, currentSessionId, totalFocusTime]);
-
+  // Session lifecycle helpers (placed before the interval that references them)
   const startFocusSession = async () => {
     if (!user) {
       toast.error('Please log in to start a focus session');
@@ -245,20 +242,20 @@ export function FocusMode() {
 
     try {
       const selectedMode = ambienceModes.find(mode => mode.id === selectedAmbience);
-      const result = await backendService.focusSessions.startSession(
+      const result = await backendService?.focusSessions?.startSession?.(
         user.id, 
         focusDuration,
         selectedMode?.name,
         isFullscreenSession
       );
       
-      if (result.success && result.data) {
+      if (result?.success && result.data) {
         setCurrentSessionId(result.data.id);
         setSessionStartTime(new Date());
         setIsTimerRunning(true);
         toast.success('Focus session started!');
       } else {
-        toast.error(result.error?.message || 'Failed to start session');
+        toast.error(result?.error?.message || 'Failed to start session');
       }
     } catch (error) {
       console.error('Error starting focus session:', error);
@@ -269,7 +266,7 @@ export function FocusMode() {
   const handleSessionComplete = async () => {
     if (user && currentSessionId) {
       try {
-        await backendService.focusSessions.endSession(currentSessionId, focusDuration);
+        await backendService?.focusSessions?.endSession?.(currentSessionId, focusDuration);
         toast.success('Focus session completed! Great job! 🎉');
       } catch (error) {
         console.error('Error completing session:', error);
@@ -286,7 +283,7 @@ export function FocusMode() {
     if (user && currentSessionId) {
       try {
         const completedMinutes = Math.floor((totalFocusTime - focusTimer) / 60);
-        await backendService.focusSessions.endSession(currentSessionId, completedMinutes);
+        await backendService?.focusSessions?.endSession?.(currentSessionId, completedMinutes);
         toast.info('Focus session stopped');
       } catch (error) {
         console.error('Error stopping session:', error);
@@ -298,6 +295,30 @@ export function FocusMode() {
     setSessionStartTime(null);
     setFocusTimer(focusDuration * 60);
   };
+
+  useEffect(() => {
+    let interval: ReturnType<typeof setInterval>;
+    if (isTimerRunning && focusTimer > 0) {
+      interval = setInterval(() => {
+        setFocusTimer((prev) => {
+          const newTime = prev - 1;
+          
+          // Update session progress in backend if user is logged in
+          if (user && currentSessionId) {
+            const completedMinutes = Math.floor((totalFocusTime - newTime) / 60);
+            backendService?.focusSessions?.updateSessionProgress?.(currentSessionId, completedMinutes)
+              .catch(error => console.error('Error updating session progress:', error));
+          }
+          
+          return newTime;
+        });
+      }, 1000);
+    } else if (isTimerRunning && focusTimer === 0) {
+      // Session completed
+      handleSessionComplete();
+    }
+    return () => clearInterval(interval);
+  }, [isTimerRunning, focusTimer, user, currentSessionId, totalFocusTime]);
 
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
@@ -316,11 +337,12 @@ export function FocusMode() {
       try {
         const sound = updatedSounds.find(s => s.id === id);
         if (sound) {
-          await backendService.ambientSounds.updateUserAmbientSetting(
+          // convert to 0..1 for backend
+          await backendService?.ambientSounds?.updateUserAmbientSetting?.(
             user.id, 
             id, 
             sound.enabled, 
-            sound.volume
+            Math.min(1, Math.max(0, sound.volume / 100))
           );
         }
       } catch (error) {
@@ -340,11 +362,11 @@ export function FocusMode() {
       try {
         const sound = updatedSounds.find(s => s.id === id);
         if (sound) {
-          await backendService.ambientSounds.updateUserAmbientSetting(
+          await backendService?.ambientSounds?.updateUserAmbientSetting?.(
             user.id, 
             id, 
             sound.enabled, 
-            volume
+            Math.min(1, Math.max(0, volume / 100))
           );
         }
       } catch (error) {
@@ -563,7 +585,7 @@ export function FocusMode() {
                     // Save to backend if user is logged in
                     if (user) {
                       try {
-                        await backendService.distractionBlocker.updateUserSettings(
+                        await backendService?.distractionBlocker?.updateUserSettings?.(
                           user.id, 
                           newValue, 
                           showBlockedSites
@@ -631,9 +653,11 @@ export function FocusMode() {
                       {site}
                     </div>
                   ))}
-                  <div className="text-xs text-muted-foreground text-center">
-                    +{blockedSites.length - 3} more sites
-                  </div>
+                  {blockedSites.length > 3 && (
+                    <div className="text-xs text-muted-foreground text-center">
+                      +{blockedSites.length - 3} more sites
+                    </div>
+                  )}
                 </motion.div>
               )}
             </GlassCard>

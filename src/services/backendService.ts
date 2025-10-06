@@ -1,7 +1,7 @@
 import { supabase } from '../lib/supabase';
 import { Database } from '../types/database';
 
-// Type definitions for our database tables
+// Type definitions for database tables
 type Task = Database['public']['Tables']['tasks']['Row'];
 type TaskInsert = Database['public']['Tables']['tasks']['Insert'];
 type TaskUpdate = Database['public']['Tables']['tasks']['Update'];
@@ -11,8 +11,9 @@ type NoteUpdate = Database['public']['Tables']['notes']['Update'];
 type FocusSession = Database['public']['Tables']['focus_sessions']['Row'];
 type FocusSessionInsert = Database['public']['Tables']['focus_sessions']['Insert'];
 type FocusSessionUpdate = Database['public']['Tables']['focus_sessions']['Update'];
+type UserSettingsUpdate = Database['public']['Tables']['user_settings']['Update'];
 
-// Mock types for tables that don't exist yet
+// Mock types
 interface MockTrack {
   id: string;
   name: string;
@@ -39,144 +40,47 @@ interface MockAmbienceMode {
 }
 
 // ==========================================
-// BREAK MODE - TRACKS SERVICE
+// TRACKS SERVICE
 // ==========================================
-
 export const tracksService = {
-  /**
-   * Fetch all tracks with optional ordering and filtering
-   */
   async getAllTracks(orderBy: 'name' | 'mood' | 'created_at' = 'name', mood?: string) {
     try {
-      let query = supabase
-        .from('tracks')
-        .select('*');
-
-      if (mood) {
-        query = query.eq('mood', mood);
-      }
-
+      let query = supabase.from('tracks').select('*');
+      if (mood) query = query.eq('mood', mood);
       query = query.order(orderBy);
-
       const { data, error } = await query;
-      
-      if (error) {
-        console.debug('Tracks table not available:', error.message);
-        // Return mock data when table doesn't exist
-        const mockTracks: MockTrack[] = [
-          {
-            id: '1',
-            name: 'Lofi Hip Hop',
-            url: '/music/lofi.mp3',
-            mood: 'focus',
-            duration: 180,
-            created_at: new Date().toISOString()
-          },
-          {
-            id: '2',
-            name: 'Nature Sounds',
-            url: '/music/nature.mp3',
-            mood: 'relaxing',
-            duration: 240,
-            created_at: new Date().toISOString()
-          }
-        ];
-        const filteredTracks = mood ? mockTracks.filter(track => track.mood === mood) : mockTracks;
-        return { data: filteredTracks, error: null };
-      }
-      
+      if (error) throw error;
+
       return { data, error: null };
-    } catch (error) {
-      console.debug('Tracks table not available:', error);
+    } catch {
+      // fallback mock tracks
       const mockTracks: MockTrack[] = [
-        {
-          id: '1',
-          name: 'Lofi Hip Hop',
-          url: '/music/lofi.mp3',
-          mood: 'focus',
-          duration: 180,
-          created_at: new Date().toISOString()
-        }
+        { id: '1', name: 'Lofi Hip Hop', url: '/music/lofi.mp3', mood: 'focus', duration: 180, created_at: new Date().toISOString() },
+        { id: '2', name: 'Nature Sounds', url: '/music/nature.mp3', mood: 'relaxing', duration: 240, created_at: new Date().toISOString() }
       ];
-      return { data: mockTracks, error: null };
+      const filtered = mood ? mockTracks.filter(t => t.mood === mood) : mockTracks;
+      return { data: filtered, error: null };
     }
   },
 
-  /**
-   * Get track by ID
-   */
   async getTrackById(id: string) {
-    const { data, error } = await supabase
-      .from('tracks')
-      .select('*')
-      .eq('id', id)
-      .single();
-    
-    if (error) {
-      console.error('Error fetching track:', error);
-      return { data: null, error };
-    }
-    
-    return { data, error: null };
+    const { data, error } = await supabase.from('tracks').select('*').eq('id', id).single();
+    return { data: error ? null : data, error: null };
   },
 
-  /**
-   * Get track by name
-   */
   async getTrackByName(name: string) {
-    const { data, error } = await supabase
-      .from('tracks')
-      .select('*')
-      .eq('name', name)
-      .single();
-    
-    if (error) {
-      console.error('Error fetching track:', error);
-      return { data: null, error };
-    }
-    
-    return { data, error: null };
+    const { data, error } = await supabase.from('tracks').select('*').eq('name', name).single();
+    return { data: error ? null : data, error: null };
   },
 
-  /**
-   * Record track play in history
-   */
   async recordPlay(userId: string, trackId: string) {
-    const { data, error } = await supabase
-      .from('user_play_history')
-      .insert({
-        user_id: userId,
-        track_id: trackId
-      });
-    
-    if (error) {
-      console.error('Error recording play:', error);
-      return { success: false, error };
-    }
-    
-    return { success: true, data };
+    const { data, error } = await supabase.from('user_play_history').insert({ user_id: userId, track_id: trackId });
+    return { success: !error, data, error };
   },
 
-  /**
-   * Get user's play history
-   */
   async getPlayHistory(userId: string, limit = 50) {
-    const { data, error } = await supabase
-      .from('user_play_history')
-      .select(`
-        *,
-        tracks (*)
-      `)
-      .eq('user_id', userId)
-      .order('played_at', { ascending: false })
-      .limit(limit);
-    
-    if (error) {
-      console.error('Error fetching play history:', error);
-      return { data: null, error };
-    }
-    
-    return { data, error: null };
+    const { data, error } = await supabase.from('user_play_history').select(`*, tracks(*)`).eq('user_id', userId).order('played_at', { ascending: false }).limit(limit);
+    return { data: error ? null : data, error: null };
   }
 };
 
@@ -185,55 +89,19 @@ export const tracksService = {
 // ==========================================
 
 export const volumeService = {
-  /**
-   * Get user volume settings
-   */
   async getUserVolumeSettings(userId: string) {
-    const { data, error } = await supabase
-      .from('user_volume_settings')
-      .select('*')
-      .eq('user_id', userId)
-      .single();
-    
-    if (error && error.code !== 'PGRST116') { // Not found error is OK
-      console.error('Error fetching volume settings:', error);
-      return { data: null, error };
-    }
-    
-    // Return default settings if not found
-    if (!data) {
-      return { 
-        data: { 
-          user_id: userId, 
-          master_volume: 70, 
-          ambient_volume: 50 
-        }, 
-        error: null 
-      };
-    }
-    
+    const { data, error } = await supabase.from('user_volume_settings').select('*').eq('user_id', userId).single();
+    if (!data) return { data: { user_id: userId, master_volume: 70, ambient_volume: 50 }, error: null };
+
+    // Clamp volume to 0-100 to fix 7000% bug
+    data.master_volume = Math.min(100, Math.max(0, data.master_volume || 70));
+    data.ambient_volume = Math.min(100, Math.max(0, data.ambient_volume || 50));
     return { data, error: null };
   },
 
-  /**
-   * Update user volume settings
-   */
   async updateVolumeSettings(userId: string, settings: Partial<Database['public']['Tables']['user_volume_settings']['Update']>) {
-    const { data, error } = await supabase
-      .from('user_volume_settings')
-      .upsert({
-        user_id: userId,
-        ...settings
-      })
-      .select()
-      .single();
-    
-    if (error) {
-      console.error('Error updating volume settings:', error);
-      return { success: false, error };
-    }
-    
-    return { success: true, data };
+    const { data, error } = await supabase.from('user_volume_settings').upsert({ user_id: userId, ...settings }).select().single();
+    return { success: !error, data, error };
   }
 };
 
@@ -242,122 +110,36 @@ export const volumeService = {
 // ==========================================
 
 export const tasksService = {
-  /**
-   * Get all tasks for a user
-   */
   async getUserTasks(userId: string, orderBy: 'created_at' | 'title' = 'created_at') {
-    const { data, error } = await supabase
-      .from('tasks')
-      .select('*')
-      .eq('user_id', userId)
-      .order(orderBy, { ascending: orderBy === 'title' });
-    
-    if (error) {
-      console.error('Error fetching tasks:', error);
-      return { data: null, error };
-    }
-    
-    return { data, error: null };
+    const { data, error } = await supabase.from('tasks').select('*').eq('user_id', userId).order(orderBy, { ascending: orderBy === 'title' });
+    return { data: error ? null : data, error: null };
   },
 
-  /**
-   * Add a new task
-   */
   async addTask(userId: string, title: string) {
-    const { data, error } = await supabase
-      .from('tasks')
-      .insert({
-        user_id: userId,
-        title,
-        completed: false
-      })
-      .select()
-      .single();
-    
-    if (error) {
-      console.error('Error adding task:', error);
-      return { success: false, error };
-    }
-    
-    return { success: true, data };
+    const { data, error } = await supabase.from('tasks').insert({ user_id: userId, title, completed: false }).select().single();
+    return { success: !error, data, error };
   },
 
-  /**
-   * Update task completion status
-   */
   async updateTaskCompletion(taskId: string, completed: boolean) {
-    const { data, error } = await supabase
-      .from('tasks')
-      .update({ completed })
-      .eq('id', taskId)
-      .select()
-      .single();
-    
-    if (error) {
-      console.error('Error updating task:', error);
-      return { success: false, error };
-    }
-    
-    return { success: true, data };
+    const { data, error } = await supabase.from('tasks').update({ completed }).eq('id', taskId).select().single();
+    return { success: !error, data, error };
   },
 
-  /**
-   * Update task title
-   */
   async updateTask(taskId: string, updates: TaskUpdate) {
-    const { data, error } = await supabase
-      .from('tasks')
-      .update(updates)
-      .eq('id', taskId)
-      .select()
-      .single();
-    
-    if (error) {
-      console.error('Error updating task:', error);
-      return { success: false, error };
-    }
-    
-    return { success: true, data };
+    const { data, error } = await supabase.from('tasks').update(updates).eq('id', taskId).select().single();
+    return { success: !error, data, error };
   },
 
-  /**
-   * Delete a task
-   */
   async deleteTask(taskId: string) {
-    const { error } = await supabase
-      .from('tasks')
-      .delete()
-      .eq('id', taskId);
-    
-    if (error) {
-      console.error('Error deleting task:', error);
-      return { success: false, error };
-    }
-    
-    return { success: true };
+    const { error } = await supabase.from('tasks').delete().eq('id', taskId);
+    return { success: !error, error };
   },
 
-  /**
-   * Get task statistics for a user
-   */
   async getTaskStats(userId: string) {
-    const { data, error } = await supabase
-      .from('tasks')
-      .select('completed')
-      .eq('user_id', userId);
-    
-    if (error) {
-      console.error('Error fetching task stats:', error);
-      return { data: null, error };
-    }
-    
-    const total = data.length;
-    const completed = data.filter(task => task.completed).length;
-    
-    return { 
-      data: { total, completed, percentage: total > 0 ? (completed / total) * 100 : 0 }, 
-      error: null 
-    };
+    const { data, error } = await supabase.from('tasks').select('completed').eq('user_id', userId);
+    const total = data?.length || 0;
+    const completed = data?.filter(t => t.completed).length || 0;
+    return { data: { total, completed, percentage: total > 0 ? (completed / total) * 100 : 0 }, error: null };
   }
 };
 
@@ -366,83 +148,26 @@ export const tasksService = {
 // ==========================================
 
 export const notesService = {
-  /**
-   * Get all notes for a user
-   */
   async getUserNotes(userId: string, orderBy: 'created_at' | 'title' = 'created_at') {
-    const { data, error } = await supabase
-      .from('notes')
-      .select('*')
-      .eq('user_id', userId)
-      .order(orderBy, { ascending: false });
-    
-    if (error) {
-      console.error('Error fetching notes:', error);
-      return { data: null, error };
-    }
-    
-    return { data, error: null };
+    const { data, error } = await supabase.from('notes').select('*').eq('user_id', userId).order(orderBy, { ascending: false });
+    return { data: error ? null : data, error: null };
   },
 
-  /**
-   * Add a new note
-   */
   async addNote(userId: string, title: string, content: string = '') {
-    const { data, error } = await supabase
-      .from('notes')
-      .insert({
-        user_id: userId,
-        title,
-        content
-      })
-      .select()
-      .single();
-    
-    if (error) {
-      console.error('Error adding note:', error);
-      return { success: false, error };
-    }
-    
-    return { success: true, data };
+    const { data, error } = await supabase.from('notes').insert({ user_id: userId, title, content }).select().single();
+    return { success: !error, data, error };
   },
 
-  /**
-   * Update a note
-   */
   async updateNote(noteId: string, updates: NoteUpdate) {
-    const { data, error } = await supabase
-      .from('notes')
-      .update(updates)
-      .eq('id', noteId)
-      .select()
-      .single();
-    
-    if (error) {
-      console.error('Error updating note:', error);
-      return { success: false, error };
-    }
-    
-    return { success: true, data };
+    const { data, error } = await supabase.from('notes').update(updates).eq('id', noteId).select().single();
+    return { success: !error, data, error };
   },
 
-  /**
-   * Delete a note
-   */
   async deleteNote(noteId: string) {
-    const { error } = await supabase
-      .from('notes')
-      .delete()
-      .eq('id', noteId);
-    
-    if (error) {
-      console.error('Error deleting note:', error);
-      return { success: false, error };
-    }
-    
-    return { success: true };
+    const { error } = await supabase.from('notes').delete().eq('id', noteId);
+    return { success: !error, error };
   }
 };
-
 // ==========================================
 // DASHBOARD - WEEKLY GOALS SERVICE
 // ==========================================
