@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { 
+import {
   Coffee,
   Play,
   Pause,
@@ -20,10 +20,13 @@ import {
   RotateCcw,
   Dumbbell,
   Timer,
-  Shuffle, 
+  Shuffle,
   Eye,
-  Hand
+  Hand,
+  Volume2,
+  SkipForward
 } from 'lucide-react';
+
 import { GlassCard } from '../GlassCard';
 import { Button } from '../ui/button';
 import { Badge } from '../ui/badge';
@@ -51,7 +54,7 @@ interface StretchExercise {
   icon: any;
   gradient: string;
   instructions: string[];
-  
+
 }
 
 export function BreakMode() {
@@ -64,7 +67,9 @@ export function BreakMode() {
   const [selectedExercise, setSelectedExercise] = useState<StretchExercise | null>(null);
   const [exerciseTimer, setExerciseTimer] = useState(0);
   const [exerciseActive, setExerciseActive] = useState(false);
-
+  const [currentTrack, setCurrentTrack] = useState('Relaxing Piano');
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [volume, setVolume] = useState(50); 
   const miniGames: MiniGame[] = [
     {
       id: '1',
@@ -187,7 +192,7 @@ export function BreakMode() {
       description: 'Release shoulder tension from long study sessions',
       difficulty: 'Easy',
       icon: Zap,
-            gradient: 'from-pink-500 via-rose-600 to-red-600',
+      gradient: 'from-pink-500 via-rose-600 to-red-600',
 
       instructions: [
         'Sit tall with arms at your sides',
@@ -203,7 +208,7 @@ export function BreakMode() {
       description: 'Improve spinal mobility and reduce back stiffness',
       difficulty: 'Medium',
       icon: Shuffle,
-            gradient: 'from-blue-500 via-cyan-600 to-teal-600',
+      gradient: 'from-blue-500 via-cyan-600 to-teal-600',
 
       instructions: [
         'Sit with feet flat on the floor',
@@ -219,7 +224,7 @@ export function BreakMode() {
       description: 'Rest tired eyes from screen fatigue',
       difficulty: 'Easy',
       icon: Eye,
-            gradient: 'from-green-500 via-emerald-600 to-cyan-600',
+      gradient: 'from-green-500 via-emerald-600 to-cyan-600',
 
       instructions: [
         'Look far into the distance',
@@ -235,7 +240,7 @@ export function BreakMode() {
       description: 'Prevent repetitive strain from typing',
       difficulty: 'Easy',
       icon: Hand,
-            gradient: 'from-orange-500 via-amber-600 to-yellow-600',
+      gradient: 'from-orange-500 via-amber-600 to-yellow-600',
 
       instructions: [
         'Extend arms forward, palms down',
@@ -251,7 +256,7 @@ export function BreakMode() {
       description: 'Counter the effects of prolonged sitting',
       difficulty: 'Medium',
       icon: Dumbbell,
-            gradient: 'from-indigo-500 via-purple-600 to-pink-600',
+      gradient: 'from-indigo-500 via-purple-600 to-pink-600',
 
       instructions: [
         'Stand and step one foot forward',
@@ -260,6 +265,15 @@ export function BreakMode() {
         'Hold and switch sides'
       ]
     }
+  ];
+  
+  const relaxingTracks = [
+    'Relaxing Piano',
+    'Nature Sounds',
+    'Meditation Bell',
+    'Ocean Waves',
+    'Forest Rain',
+    'Ambient Space'
   ];
 
   // Breathing exercise logic
@@ -339,6 +353,17 @@ export function BreakMode() {
     const secs = seconds % 60;
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   };
+  const nextTrack = () => {
+    const currentIndex = relaxingTracks.indexOf(currentTrack);
+    const nextIndex = (currentIndex + 1) % relaxingTracks.length;
+    setCurrentTrack(relaxingTracks[nextIndex]);
+  };
+
+  const shuffleTrack = () => {
+    const otherTracks = relaxingTracks.filter(track => track !== currentTrack);
+    const randomTrack = otherTracks[Math.floor(Math.random() * otherTracks.length)];
+    setCurrentTrack(randomTrack);
+  };
 
   // Show game if one is selected
   if (selectedGame) {
@@ -354,7 +379,7 @@ export function BreakMode() {
     <div className="min-h-screen pb-8 px-4 md:px-6 pt-4 md:pt-8">
       <div className="max-w-7xl mx-auto space-y-6 md:space-y-8">
         {/* Enhanced Header */}
-        <motion.div 
+        <motion.div
           className="text-center space-y-4"
           initial={{ opacity: 0, y: -30 }}
           animate={{ opacity: 1, y: 0 }}
@@ -415,7 +440,7 @@ export function BreakMode() {
               className="relative group"
             >
               <motion.div
-                whileHover={{ 
+                whileHover={{
                   scale: 1.02,
                   y: -5
                 }}
@@ -425,7 +450,7 @@ export function BreakMode() {
                 <GlassCard className="h-full p-6 relative overflow-hidden cursor-pointer transition-all duration-300 hover:shadow-xl hover:shadow-black/10 dark:hover:shadow-black/30">
                   {/* Background Gradient */}
                   <div className={`absolute inset-0 bg-gradient-to-br ${game.gradient} opacity-5 group-hover:opacity-10 transition-opacity duration-300`} />
-                  
+
                   {/* Content */}
                   <div className="relative z-10 h-full flex flex-col">
                     {/* Header */}
@@ -434,8 +459,8 @@ export function BreakMode() {
                         <game.icon className="w-6 h-6" />
                       </div>
                       <div className="flex flex-col items-end gap-2">
-                        <Badge 
-                          variant="outline" 
+                        <Badge
+                          variant="outline"
                           className={`text-xs font-medium ${getDifficultyColor(game.difficulty)}`}
                         >
                           {game.difficulty}
@@ -454,7 +479,7 @@ export function BreakMode() {
                       <p className="text-sm text-muted-foreground line-clamp-2">
                         {game.description}
                       </p>
-                      
+
                       {/* Features */}
                       <div className="space-y-1">
                         {game.features.slice(0, 2).map((feature, idx) => (
@@ -473,7 +498,7 @@ export function BreakMode() {
                           <Clock className="w-3 h-3" />
                           <span>{game.duration}</span>
                         </div>
-                        
+
                         <Button
                           onClick={() => playGame(game.gameType)}
                           size="sm"
@@ -553,58 +578,58 @@ export function BreakMode() {
 
         {/* Stretch Exercises Section */}
         <motion.div
-  className="mt-12"
-  initial={{ opacity: 0, y: 30 }}
-  animate={{ opacity: 1, y: 0 }}
-  transition={{ duration: 0.8, delay: 0.8 }}
->
-  {/* Section Header */}
-  <div className="text-center mb-10">
-    <h2 className="text-3xl font-bold text-gradient-secondary mb-2">
-      Stretch & Movement
-    </h2>
-    <p className="text-muted-foreground max-w-xl mx-auto">
-      Combat study fatigue with short, targeted exercises — designed to refresh your body and mind.
-    </p>
-    <div className="mt-4 h-1 w-32 mx-auto 
+          className="mt-12"
+          initial={{ opacity: 0, y: 30 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.8, delay: 0.8 }}
+        >
+          {/* Section Header */}
+          <div className="text-center mb-10">
+            <h2 className="text-3xl font-bold text-gradient-secondary mb-2">
+              Stretch & Movement
+            </h2>
+            <p className="text-muted-foreground max-w-xl mx-auto">
+              Combat study fatigue with short, targeted exercises — designed to refresh your body and mind.
+            </p>
+            <div className="mt-4 h-1 w-32 mx-auto 
       bg-gradient-to-r from-emerald-400 to-teal-500 
       dark:from-emerald-600 dark:to-teal-700 
       rounded-full shadow-md shadow-emerald-500/20" />
-  </div>
+          </div>
 
-  {/* Grid of Exercises */}
-  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-    {stretchExercises.map((exercise, index) => (
-      <motion.div
-        key={exercise.id}
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.6, delay: index * 0.1 }}
-        whileHover={{ scale: 1.03, y: -6 }}
-        whileTap={{ scale: 0.97 }}
-        className="relative group"
-      >
-        <GlassCard className="h-full p-6 relative overflow-hidden backdrop-blur-lg cursor-pointer 
+          {/* Grid of Exercises */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            {stretchExercises.map((exercise, index) => (
+              <motion.div
+                key={exercise.id}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6, delay: index * 0.1 }}
+                whileHover={{ scale: 1.03, y: -6 }}
+                whileTap={{ scale: 0.97 }}
+                className="relative group"
+              >
+                <GlassCard className="h-full p-6 relative overflow-hidden backdrop-blur-lg cursor-pointer 
           transition-all duration-300 border border-border/50 
           hover:shadow-xl hover:shadow-emerald-500/20 dark:hover:shadow-emerald-700/30"
-        >
-          {/* Background Gradient */}
-          <div className="absolute inset-0 bg-gradient-to-br 
+                >
+                  {/* Background Gradient */}
+                  <div className="absolute inset-0 bg-gradient-to-br 
             from-emerald-400/60 to-teal-500/60 
             dark:from-emerald-600/50 dark:to-teal-700/50 
             opacity-10 group-hover:opacity-20 
             transition-all duration-300" />
 
-          {/* Content */}
-          <div className="relative z-10 h-full flex flex-col">
-            {/* Header */}
+                  {/* Content */}
+                  <div className="relative z-10 h-full flex flex-col">
+                    {/* Header */}
                     <div className="flex items-start justify-between mb-4">
                       <div className={`p-3 rounded-xl bg-gradient-to-br ${exercise.gradient} text-white shadow-lg`}>
                         <exercise.icon className="w-6 h-6" />
                       </div>
                       <div className="flex flex-col items-end gap-2">
-                        <Badge 
-                          variant="outline" 
+                        <Badge
+                          variant="outline"
                           className={`text-xs font-medium ${getDifficultyColor(exercise.difficulty)}`}
                         >
                           {exercise.difficulty}
@@ -613,176 +638,243 @@ export function BreakMode() {
                           {exercise.category}
                         </span>
                       </div>
-            </div>
-            
-            {/* Exercise Info */}
-            <div className="flex-1 space-y-3">
-              <h3 className="text-lg font-semibold text-foreground line-clamp-1">
-                {exercise.name}
-              </h3>
-              <p className="text-sm text-muted-foreground line-clamp-2">
-                {exercise.description}
-              </p>
+                    </div>
 
-              {/* Instructions Preview */}
-              <div className="space-y-1">
-                {exercise.instructions.slice(0, 2).map((instruction, idx) => (
-                  <div 
-                    key={idx} 
-                    className="flex items-center gap-2 text-xs text-muted-foreground"
-                  >
-                    <div className="w-1 h-1 rounded-full bg-current" />
-                    <span className="line-clamp-1">{instruction}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
+                    {/* Exercise Info */}
+                    <div className="flex-1 space-y-3">
+                      <h3 className="text-lg font-semibold text-foreground line-clamp-1">
+                        {exercise.name}
+                      </h3>
+                      <p className="text-sm text-muted-foreground line-clamp-2">
+                        {exercise.description}
+                      </p>
 
-            {/* Footer */}
-            <div className="pt-4 border-t border-border/50">
-              <Button
-                onClick={() => startExercise(exercise)}
-                size="sm"
-                className="w-full bg-gradient-to-r from-indigo-500 via-purple-600 to-pink-600 
+                      {/* Instructions Preview */}
+                      <div className="space-y-1">
+                        {exercise.instructions.slice(0, 2).map((instruction, idx) => (
+                          <div
+                            key={idx}
+                            className="flex items-center gap-2 text-xs text-muted-foreground"
+                          >
+                            <div className="w-1 h-1 rounded-full bg-current" />
+                            <span className="line-clamp-1">{instruction}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Footer */}
+                    <div className="pt-4 border-t border-border/50">
+                      <Button
+                        onClick={() => startExercise(exercise)}
+                        size="sm"
+                        className="w-full bg-gradient-to-r from-indigo-500 via-purple-600 to-pink-600 
                   text-white border-0 hover:shadow-lg hover:shadow-emerald-500/30 
                   transition-all duration-300"
-              >
-                <Play className="w-3 h-3 mr-1" />
-                Start Exercise
-              </Button>
-            </div>
+                      >
+                        <Play className="w-3 h-3 mr-1" />
+                        Start Exercise
+                      </Button>
+                    </div>
+                  </div>
+                </GlassCard>
+              </motion.div>
+            ))}
           </div>
-        </GlassCard>
-      </motion.div>
-    ))}
-  </div>
-</motion.div>
+        </motion.div>
 
 
 
         {/* Breathing Exercise Section */}
-        <motion.div
-          className="mt-12"
-          initial={{ opacity: 0, y: 30 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8, delay: 0.6 }}
-        >
-          <div className="text-center mb-8">
+        <div className="text-center mb-8">
             <h2 className="text-3xl font-bold text-gradient-secondary mb-2">
               Quick Relaxation
             </h2>
             <p className="text-muted-foreground">
               Take a moment to reset with guided breathing
             </p>
+        </div>
+        
+        <motion.div
+  className="mt-12 flex flex-col md:flex-row gap-6"
+  initial={{ opacity: 0, y: 30 }}
+  animate={{ opacity: 1, y: 0 }}
+  transition={{ duration: 0.8, delay: 0.6 }}
+        >
+          
+  {/* Breathing Exercise */}
+  <div className="flex-1">
+    <GlassCard className="text-center relative overflow-hidden p-6 h-full flex flex-col justify-between">
+      <div className="absolute inset-0 opacity-5">
+        <div className="absolute inset-0 bg-gradient-to-br from-blue-500 to-green-500" />
+      </div>
+
+      <div className="relative z-10 flex flex-col justify-between h-full">
+        <div>
+          <div className="flex items-center justify-center gap-2 mb-4">
+            <Wind className="w-6 h-6 text-blue-500" />
+            <h3 className="text-xl font-semibold text-gradient-secondary">
+              4-7-8 Breathing
+            </h3>
           </div>
 
-          <div className="max-w-md mx-auto px-4 md:px-0">
-            <GlassCard className="text-center relative overflow-hidden">
-              {/* Background Pattern */}
-              <div className="absolute inset-0 opacity-5">
-                <div className="absolute inset-0 bg-gradient-to-br from-blue-500 to-green-500" />
-              </div>
-              
-              <div className="relative z-10 p-8">
-                <div className="flex items-center justify-center gap-2 mb-6">
-                  <Wind className="w-6 h-6 text-blue-500" />
-                  <h3 className="text-xl font-semibold text-gradient-secondary">
-                    4-7-8 Breathing
-                  </h3>
+          <div className="relative mb-6">
+            <motion.div
+              className="w-32 h-32 mx-auto rounded-full bg-gradient-to-r from-blue-500 to-green-500 flex items-center justify-center relative shadow-2xl"
+              animate={{
+                scale: breathingActive
+                  ? breathingPhase === 'inhale' ? 1.3
+                    : breathingPhase === 'hold' ? 1.3
+                      : 0.9
+                  : 1
+              }}
+              transition={{
+                duration: breathingPhase === 'inhale' ? 4
+                  : breathingPhase === 'hold' ? 7
+                    : 8,
+                ease: 'easeInOut'
+              }}
+            >
+              <div className="text-white font-bold text-center">
+                <div className="text-sm capitalize mb-1">
+                  {breathingActive ? breathingPhase : 'Ready'}
                 </div>
-                
-                <div className="relative mb-8">
-                  <motion.div
-                    className="w-32 h-32 mx-auto rounded-full bg-gradient-to-r from-blue-500 to-green-500 flex items-center justify-center relative shadow-2xl"
-                    animate={{
-                      scale: breathingActive 
-                        ? breathingPhase === 'inhale' ? 1.3 
-                          : breathingPhase === 'hold' ? 1.3 
-                          : 0.9
-                        : 1
-                    }}
-                    transition={{ 
-                      duration: breathingPhase === 'inhale' ? 4 
-                              : breathingPhase === 'hold' ? 7 
-                              : 8,
-                      ease: 'easeInOut'
-                    }}
-                  >
-                    <div className="text-white font-bold text-center">
-                      <div className="text-sm capitalize mb-1">
-                        {breathingActive ? breathingPhase : 'Ready'}
-                      </div>
-                      <div className="text-2xl">
-                        {breathingActive ? `${breathingTimer}s` : '4-7-8'}
-                      </div>
-                    </div>
-                    
-                    {breathingActive && (
-                      <motion.div
-                        className="absolute inset-0 rounded-full border-4 border-white/30"
-                        animate={{ 
-                          scale: [1, 1.2, 1],
-                          opacity: [0.3, 0.8, 0.3]
-                        }}
-                        transition={{ 
-                          duration: 2, 
-                          repeat: Infinity,
-                          ease: "easeInOut"
-                        }}
-                      />
-                    )}
-                  </motion.div>
-                </div>
-
-                {breathingActive && (
-                  <div className="mb-6 space-y-2">
-                    <div className="flex items-center justify-between text-sm">
-                      <span>Cycles completed</span>
-                      <span>{breathingCycle}</span>
-                    </div>
-                    <div className="text-xs text-muted-foreground">
-                      Inhale 4s → Hold 7s → Exhale 8s
-                    </div>
-                  </div>
-                )}
-
-                <div className="grid grid-cols-2 gap-3">
-                  <Button
-                    variant={breathingActive ? "outline" : "default"}
-                    onClick={() => setBreathingActive(!breathingActive)}
-                    className="bg-gradient-to-r from-blue-600 to-green-600 text-white border-0"
-                  >
-                    {breathingActive ? (
-                      <>
-                        <Pause className="w-4 h-4 mr-2" />
-                        Stop
-                      </>
-                    ) : (
-                      <>
-                        <Play className="w-4 h-4 mr-2" />
-                        Start
-                      </>
-                    )}
-                  </Button>
-                  <Button
-                    variant="outline"
-                    onClick={() => {
-                      setBreathingActive(false);
-                      setBreathingCycle(0);
-                      setBreathingTimer(0);
-                      setBreathingPhase('inhale');
-                    }}
-                    disabled={!breathingActive}
-                  >
-                    <RotateCcw className="w-4 h-4 mr-2" />
-                    Reset
-                  </Button>
+                <div className="text-2xl">
+                  {breathingActive ? `${breathingTimer}s` : '4-7-8'}
                 </div>
               </div>
-            </GlassCard>
+
+              {breathingActive && (
+                <motion.div
+                  className="absolute inset-0 rounded-full border-4 border-white/30"
+                  animate={{
+                    scale: [1, 1.2, 1],
+                    opacity: [0.3, 0.8, 0.3]
+                  }}
+                  transition={{
+                    duration: 2,
+                    repeat: Infinity,
+                    ease: "easeInOut"
+                  }}
+                />
+              )}
+            </motion.div>
           </div>
-        </motion.div>
+
+          {breathingActive && (
+            <div className="mb-4 space-y-1">
+              <div className="flex items-center justify-between text-sm">
+                <span>Cycles completed</span>
+                <span>{breathingCycle}</span>
+              </div>
+              <div className="text-xs text-muted-foreground">
+                Inhale 4s → Hold 7s → Exhale 8s
+              </div>
+            </div>
+          )}
+        </div>
+
+        <div className="grid grid-cols-2 gap-2 mt-4">
+          <Button
+            variant={breathingActive ? "outline" : "default"}
+            onClick={() => setBreathingActive(!breathingActive)}
+            className="bg-gradient-to-r from-blue-600 to-green-600 text-white border-0"
+          >
+            {breathingActive ? (
+              <>
+                <Pause className="w-4 h-4 mr-2" />
+                Stop
+              </>
+            ) : (
+              <>
+                <Play className="w-4 h-4 mr-2" />
+                Start
+              </>
+            )}
+          </Button>
+          <Button
+            variant="outline"
+            onClick={() => {
+              setBreathingActive(false);
+              setBreathingCycle(0);
+              setBreathingTimer(0);
+              setBreathingPhase('inhale');
+            }}
+            disabled={!breathingActive}
+          >
+            <RotateCcw className="w-4 h-4 mr-2" />
+            Reset
+          </Button>
+        </div>
+      </div>
+    </GlassCard>
+  </div>
+
+  {/* Music Player */}
+  <div className="flex-1">
+    <GlassCard className="text-center p-6 relative h-full flex flex-col justify-between">
+      <div className="relative flex flex-col justify-between h-full">
+        <div>
+          <div className="w-24 h-24 mx-auto rounded-full gradient-primary flex items-center justify-center mb-4">
+            <motion.div
+              animate={{ rotate: isPlaying ? 360 : 0 }}
+              transition={{ duration: 20, repeat: isPlaying ? Infinity : 0, ease: 'linear' }}
+            >
+              <Volume2 className="w-8 h-8 text-white" />
+            </motion.div>
+          </div>
+          <h3 className="font-semibold text-lg mb-1">{currentTrack}</h3>
+          <Badge variant="default">Now Playing</Badge>
+
+          <div className="flex justify-center gap-3 mb-4 mt-4">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={shuffleTrack}
+            >
+              <Shuffle className="w-4 h-4 mr-1" />
+              Shuffle
+            </Button>
+            <Button
+              variant="default"
+              onClick={() => setIsPlaying(!isPlaying)}
+            >
+              {isPlaying ? <Pause className="w-5 h-5 mr-1" /> : <Play className="w-5 h-5 mr-1" />}
+              {isPlaying ? 'Pause' : 'Play'}
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={nextTrack}
+            >
+              <SkipForward className="w-4 h-4 mr-1" />
+              Next
+            </Button>
+          </div>
+        </div>
+
+        <div className="space-y-3">
+          <div className="flex items-center justify-between text-sm">
+            <span>Volume</span>
+            <span>{volume}%</span>
+          </div>
+          <input
+            type="range"
+            min="0"
+            max="100"
+            value={volume}
+            onChange={(e) => setVolume(Number(e.target.value))}
+            className="w-full h-2 bg-muted rounded-lg appearance-none cursor-pointer slider"
+          />
+        </div>
+      </div>
+    </GlassCard>
+  </div>
+</motion.div>
+
       </div>
     </div>
+
   );
+
 }
