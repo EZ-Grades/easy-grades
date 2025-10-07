@@ -110,9 +110,6 @@ export function CustomSidebar({ currentPage, onPageChange, user, onLogout }: Sid
 
       <SidebarContent className="px-2">
         <SidebarGroup>
-          <SidebarGroupLabel className="text-sm font-medium text-muted-foreground px-2 mb-2">
-            Navigation
-          </SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu className="space-y-1">
               {navItems.map((item) => {
