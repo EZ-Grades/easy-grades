@@ -11,12 +11,13 @@ import {
   Mountain,
   TreePine,
   Lightbulb,
-  Zap
+  Zap,
+  Brain,
+  HeartPulse
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
 import { Badge } from "../ui/badge";
-import  Logo  from '../../assets/Logo.png';
-
+import Logo from "../../assets/Logo.png";
 export function AboutUs() {
   const features = [
     {
@@ -42,6 +43,12 @@ export function AboutUs() {
       title: 'Study Resources',
       description: 'Comprehensive tools to enhance your learning experience',
       color: 'from-orange-500 to-amber-500'
+    },
+    {
+      icon: Brain,
+      title: 'Mental Health Support',
+      description: 'Crisis resources and wellness guidance for student well-being',
+      color: 'from-pink-500 to-rose-500'
     }
   ];
 
@@ -69,6 +76,12 @@ export function AboutUs() {
       title: 'Sustainable Innovation',
       description: 'Clean technology and eco-friendly development solutions',
       gradient: 'from-yellow-400 to-orange-600'
+    },
+    {
+      icon: HeartPulse,
+      title: 'Mental Health Awareness',
+      description: 'Providing accessible mental health resources and reducing stigma in education',
+      gradient: 'from-pink-400 to-rose-600'
     }
   ];
 
@@ -93,7 +106,7 @@ export function AboutUs() {
                 ease: "easeInOut" 
               }}
             >
-              <div className="mb-8">
+               <div className="mb-8">
                       <img
                         src={Logo}
                         alt="App Logo"
@@ -143,7 +156,7 @@ export function AboutUs() {
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6">
             {features.map((feature, index) => (
               <motion.div
                 key={index}
@@ -183,7 +196,7 @@ export function AboutUs() {
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {impactAreas.map((area, index) => (
               <motion.div
                 key={index}

@@ -126,14 +126,16 @@ export function ConnectFourGame({ onComplete }: ConnectFourGameProps) {
         ...prev,
         [gameWinner]: prev[gameWinner] + 1
       }));
-      setTimeout(() => onComplete(), 2000);
+      // Auto-restart after showing result
+      setTimeout(() => resetGame(), 3000);
       return true;
     }
 
     // Check for draw
     if (newBoard.every(row => row.every(cell => cell !== null))) {
       setGameStatus('draw');
-      setTimeout(() => onComplete(), 2000);
+      // Auto-restart after showing result
+      setTimeout(() => resetGame(), 3000);
       return true;
     }
 

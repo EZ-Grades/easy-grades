@@ -1,6 +1,28 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
+  getQuestionsByCertification,
+  getAllFlashcardDecks,
+  getFlashcardsByDeck,
+  createPracticeSession,
+  updatePracticeSession,
+  getUserFlashcardProgress,
+  updateFlashcardProgress,
+  createFlashcardReviewSession,
+  updateFlashcardReviewSession,
+  saveAIGeneratedFlashcardDeck,
+  saveAIGeneratedQuestions,
+  ExamQuestion as DbQuestion,
+  FlashcardDeck as DbFlashcardDeck,
+  Flashcard as DbFlashcard
+} from '../../services/studyHubService';
+import { 
+  generatePracticeQuestions,
+  generateFlashcards as generateAIFlashcards,
+  isPerplexityConfigured,
+  getConfigurationError
+} from '../../services/perplexityService';
+import { 
   Award, 
   BookOpen, 
   Search, 
@@ -67,6 +89,23 @@ interface Question {
   difficulty: string;
 }
 
+// Helper function to convert database questions to UI format
+function convertDbQuestionToUI(dbQuestion: DbQuestion): Question {
+  return {
+    id: dbQuestion.id,
+    question: dbQuestion.question,
+    options: {
+      'A': dbQuestion.option_a,
+      'B': dbQuestion.option_b,
+      'C': dbQuestion.option_c,
+      'D': dbQuestion.option_d
+    },
+    correct: dbQuestion.correct_answer,
+    explanation: dbQuestion.explanation,
+    difficulty: dbQuestion.difficulty
+  };
+}
+
 interface FlashcardSet {
   id: string;
   title: string;
@@ -89,6 +128,14 @@ export function StudyHub({ user }: StudyHubProps) {
   const [flashcardSets, setFlashcardSets] = useState<FlashcardSet[]>([]);
   const [revisionMode, setRevisionMode] = useState(false);
   const [showAIHelper, setShowAIHelper] = useState(false);
+  const [loadingQuestions, setLoadingQuestions] = useState(false);
+  const [loadingFlashcards, setLoadingFlashcards] = useState(false);
+  const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
+  const [currentDeckCards, setCurrentDeckCards] = useState<DbFlashcard[]>([]);
+  const [currentCardIndex, setCurrentCardIndex] = useState(0);
+  const [showCardAnswer, setShowCardAnswer] = useState(false);
+  const [userStats, setUserStats] = useState<any>(null);
+  const [loadingUserData, setLoadingUserData] = useState(true);
 
   const categories = [
     { id: 'it', name: 'IT & Technology', icon: Code, color: 'from-blue-500 to-cyan-500', certifications: [
@@ -211,33 +258,217 @@ export function StudyHub({ user }: StudyHubProps) {
     }
   ];
 
-  // Initialize flashcard sets
+  // Load user data and stats on mount
   useEffect(() => {
-    const initialFlashcardSets: FlashcardSet[] = [
-      { id: '1', title: 'AWS Cloud Concepts', description: 'Basic cloud computing terms and services', cardCount: 25, progress: 80, category: 'it' },
-      { id: '2', title: 'Network Security', description: 'Security protocols and best practices', cardCount: 30, progress: 60, category: 'it' },
-      { id: '3', title: 'Project Management Terms', description: 'PMP key terminology and concepts', cardCount: 40, progress: 45, category: 'business' },
-      { id: '4', title: 'Medical Terminology', description: 'Common medical terms and definitions', cardCount: 50, progress: 70, category: 'healthcare' },
-      { id: '5', title: 'Financial Analysis', description: 'Key financial ratios and concepts', cardCount: 35, progress: 25, category: 'finance' },
-      { id: '6', title: 'English Grammar', description: 'Advanced grammar rules for TOEFL/IELTS', cardCount: 45, progress: 90, category: 'language' },
-    ];
-    setFlashcardSets(initialFlashcardSets);
-  }, []);
+    const loadUserData = async () => {
+      if (!user) {
+        setLoadingUserData(false);
+        return;
+      }
 
-  const handleStartPractice = (cert: Certification) => {
+      setLoadingUserData(true);
+      try {
+        // Import getUserStats function
+        const { getUserStats } = await import('../../services/studyHubService');
+        const { data: stats, error } = await getUserStats(user.id);
+        
+        if (!error && stats) {
+          setUserStats(stats);
+        }
+      } catch (error) {
+        console.error('Error loading user data:', error);
+      } finally {
+        setLoadingUserData(false);
+      }
+    };
+
+    loadUserData();
+  }, [user]);
+
+  // Fetch flashcard sets from Supabase
+  useEffect(() => {
+    const fetchFlashcards = async () => {
+      setLoadingFlashcards(true);
+      try {
+        const { data, error } = await getAllFlashcardDecks(selectedCategory);
+        
+        if (error) {
+          console.error('Error fetching flashcards:', error);
+          toast.error('Failed to load flashcards');
+          return;
+        }
+
+        if (data) {
+          const flashcardSets: FlashcardSet[] = data.map((deck: DbFlashcardDeck) => ({
+            id: deck.id,
+            title: deck.title,
+            description: deck.description || '',
+            cardCount: deck.card_count,
+            progress: 0, // Will be fetched from user progress if logged in
+            category: deck.category
+          }));
+          setFlashcardSets(flashcardSets);
+        }
+      } catch (error) {
+        console.error('Error fetching flashcards:', error);
+      } finally {
+        setLoadingFlashcards(false);
+      }
+    };
+
+    fetchFlashcards();
+  }, [selectedCategory]);
+
+  const handleStartPractice = async (cert: Certification) => {
+    if (!user) {
+      toast.error('Please sign in to start practice sessions');
+      return;
+    }
+
+    // Check if Perplexity is configured
+    if (!isPerplexityConfigured()) {
+      toast.error(getConfigurationError());
+      return;
+    }
+
+    setLoadingQuestions(true);
     setSelectedCert(cert);
-    setCurrentQuestions(sampleQuestions.slice(0, 5)); // Load 5 questions for demo
-    setCurrentQuestionIndex(0);
-    setSelectedAnswers({});
-    setShowResults(false);
-    setPracticeMode(true);
-    setSessionStartTime(new Date());
-    toast.success(`Started practice session for ${cert.name}`);
+    
+    try {
+      // First, try to fetch existing questions from database
+      const { data: existingQuestions, error: dbError } = await getQuestionsByCertification(cert.id, 10);
+      
+      let questions: any[] = [];
+      
+      // If we have enough questions in database, use them
+      if (existingQuestions && existingQuestions.length >= 5) {
+        questions = existingQuestions.map(convertDbQuestionToUI);
+        toast.success(`Loaded ${questions.length} questions from database`);
+      } else {
+        // Otherwise, generate new questions using AI
+        toast.info('Generating practice questions using AI... This may take a moment');
+        
+        const { data: aiQuestions, error: aiError } = await generatePracticeQuestions(
+          cert.name,
+          10,
+          'medium'
+        );
+        
+        if (aiError || !aiQuestions || aiQuestions.length === 0) {
+          toast.error(aiError || 'Failed to generate questions');
+          setLoadingQuestions(false);
+          return;
+        }
+
+        // Save AI-generated questions to database for future use
+        const questionsToSave = aiQuestions.map((q, index) => ({
+          question: q.question,
+          option_a: q.options[0],
+          option_b: q.options[1],
+          option_c: q.options[2],
+          option_d: q.options[3],
+          correct_answer: q.answer,
+          explanation: q.explanation,
+          difficulty: q.difficulty,
+          question_number: index + 1
+        }));
+
+        await saveAIGeneratedQuestions(cert.id, questionsToSave);
+
+        // Convert AI questions to UI format
+        questions = aiQuestions.map((q, index) => ({
+          id: `ai-${Date.now()}-${index}`,
+          question: q.question,
+          options: {
+            'A': q.options[0],
+            'B': q.options[1],
+            'C': q.options[2],
+            'D': q.options[3]
+          },
+          correct: q.answer,
+          explanation: q.explanation,
+          difficulty: q.difficulty
+        }));
+
+        toast.success(`Generated ${questions.length} new practice questions!`);
+      }
+
+      setCurrentQuestions(questions);
+      
+      // Create practice session in database
+      const { data: sessionData, error: sessionError } = await createPracticeSession(
+        user.id,
+        cert.id
+      );
+      
+      if (sessionError) {
+        console.error('Error creating session:', sessionError);
+      } else if (sessionData) {
+        setCurrentSessionId(sessionData.id);
+      }
+      
+      setCurrentQuestionIndex(0);
+      setSelectedAnswers({});
+      setShowResults(false);
+      setPracticeMode(true);
+      setSessionStartTime(new Date());
+    } catch (error: any) {
+      console.error('Error starting practice:', error);
+      toast.error(error.message || 'Failed to start practice session');
+    } finally {
+      setLoadingQuestions(false);
+    }
   };
 
-  const handleStartRevision = (flashcardSet: FlashcardSet) => {
-    setRevisionMode(true);
-    toast.success(`Started revision for ${flashcardSet.title}`);
+  const handleStartRevision = async (flashcardSet: FlashcardSet) => {
+    if (!user) {
+      toast.error('Please sign in to study flashcards');
+      return;
+    }
+
+    setLoadingFlashcards(true);
+    
+    try {
+      // Fetch flashcards for this deck
+      const { data, error } = await getFlashcardsByDeck(flashcardSet.id);
+      
+      if (error) {
+        toast.error('Failed to load flashcards');
+        console.error('Error fetching flashcards:', error);
+        setLoadingFlashcards(false);
+        return;
+      }
+
+      if (!data || data.length === 0) {
+        toast.error('No flashcards available in this deck yet');
+        setLoadingFlashcards(false);
+        return;
+      }
+
+      setCurrentDeckCards(data);
+      setCurrentCardIndex(0);
+      setShowCardAnswer(false);
+      
+      // Create review session in database
+      const { data: sessionData, error: sessionError } = await createFlashcardReviewSession(
+        user.id,
+        flashcardSet.id
+      );
+      
+      if (sessionError) {
+        console.error('Error creating review session:', sessionError);
+      } else if (sessionData) {
+        setCurrentSessionId(sessionData.id);
+      }
+      
+      setRevisionMode(true);
+      toast.success(`Started revision for ${flashcardSet.title} with ${data.length} cards`);
+    } catch (error) {
+      console.error('Error starting revision:', error);
+      toast.error('Failed to start revision');
+    } finally {
+      setLoadingFlashcards(false);
+    }
   };
 
   const handleAnswerSelect = (questionId: string, answer: string) => {
@@ -259,28 +490,107 @@ export function StudyHub({ user }: StudyHubProps) {
     }
   };
 
-  const handleSubmitSession = () => {
+  const handleSubmitSession = async () => {
     const correct = currentQuestions.reduce((count, question) => {
       return selectedAnswers[question.id] === question.correct ? count + 1 : count;
     }, 0);
     
     const score = Math.round((correct / currentQuestions.length) * 100);
+    const timeSpent = sessionStartTime 
+      ? Math.round((new Date().getTime() - sessionStartTime.getTime()) / 1000)
+      : 0;
+    
+    // Update session in database
+    if (currentSessionId && user) {
+      try {
+        await updatePracticeSession(currentSessionId, {
+          questions_attempted: currentQuestions.length,
+          questions_correct: correct,
+          score_percentage: score,
+          time_spent_seconds: timeSpent,
+          completed_at: new Date().toISOString(),
+          session_data: {
+            answers: selectedAnswers,
+            questions: currentQuestions.map(q => q.id)
+          }
+        });
+      } catch (error) {
+        console.error('Error updating session:', error);
+      }
+    }
+    
     setShowResults(true);
     toast.success(`Session completed! Score: ${score}%`);
   };
 
-  const handleGenerateFlashcards = (cert: Certification) => {
-    // Simulate AI flashcard generation
-    const newSet: FlashcardSet = {
-      id: Date.now().toString(),
-      title: `${cert.name} - AI Generated`,
-      description: `Auto-generated flashcards for ${cert.name}`,
-      cardCount: 20,
-      progress: 0,
-      category: cert.category
-    };
-    setFlashcardSets(prev => [...prev, newSet]);
-    toast.success(`Generated ${newSet.cardCount} flashcards for ${cert.name}!`);
+  const handleGenerateFlashcards = async (cert: Certification) => {
+    if (!user) {
+      toast.error('Please sign in to generate flashcards');
+      return;
+    }
+
+    // Check if Perplexity is configured
+    if (!isPerplexityConfigured()) {
+      toast.error(getConfigurationError());
+      return;
+    }
+
+    setLoadingFlashcards(true);
+    
+    try {
+      toast.info('Generating flashcards using AI... This may take a moment');
+      
+      // Generate flashcards using AI
+      const { data: aiFlashcards, error: aiError } = await generateAIFlashcards(
+        cert.name,
+        20
+      );
+      
+      if (aiError || !aiFlashcards || aiFlashcards.length === 0) {
+        toast.error(aiError || 'Failed to generate flashcards');
+        setLoadingFlashcards(false);
+        return;
+      }
+
+      // Save flashcards to database
+      const { data: savedDeck, error: saveError } = await saveAIGeneratedFlashcardDeck(
+        cert.id,
+        `${cert.name} - AI Generated`,
+        `Auto-generated flashcards for ${cert.name} certification`,
+        cert.category,
+        aiFlashcards.map(card => ({
+          question: card.question,
+          answer: card.answer,
+          hint: card.hint,
+          difficulty: 'medium'
+        })),
+        user.id
+      );
+
+      if (saveError || !savedDeck) {
+        toast.error('Failed to save flashcards');
+        setLoadingFlashcards(false);
+        return;
+      }
+
+      // Add to local state
+      const newSet: FlashcardSet = {
+        id: savedDeck.deck.id,
+        title: savedDeck.deck.title,
+        description: savedDeck.deck.description,
+        cardCount: aiFlashcards.length,
+        progress: 0,
+        category: cert.category
+      };
+
+      setFlashcardSets(prev => [...prev, newSet]);
+      toast.success(`Generated and saved ${aiFlashcards.length} flashcards for ${cert.name}!`);
+    } catch (error: any) {
+      console.error('Error generating flashcards:', error);
+      toast.error(error.message || 'Failed to generate flashcards');
+    } finally {
+      setLoadingFlashcards(false);
+    }
   };
 
   const filteredCertifications = categories.flatMap(cat => 
@@ -309,6 +619,165 @@ export function StudyHub({ user }: StudyHubProps) {
         return 'border-gray-500 text-gray-600 bg-gray-50 dark:bg-gray-950/30';
     }
   };
+
+  // Flashcard Revision View
+  if (revisionMode && currentDeckCards.length > 0) {
+    const currentCard = currentDeckCards[currentCardIndex];
+    
+    return (
+      <div className="min-h-screen pb-8 px-6 pt-8">
+        <div className="max-w-4xl mx-auto space-y-6">
+          <Card className="glassmorphism border-0">
+            <CardHeader>
+              <CardTitle className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <BookOpen className="w-5 h-5" />
+                  Flashcard Revision
+                </div>
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setRevisionMode(false);
+                    setCurrentDeckCards([]);
+                    setCurrentCardIndex(0);
+                    setShowCardAnswer(false);
+                  }}
+                >
+                  Exit Revision
+                </Button>
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="flex items-center justify-between">
+                <div className="text-sm text-muted-foreground">
+                  Card {currentCardIndex + 1} of {currentDeckCards.length}
+                </div>
+                <Progress 
+                  value={((currentCardIndex + 1) / currentDeckCards.length) * 100} 
+                  className="w-48 h-2" 
+                />
+              </div>
+
+              <motion.div
+                key={currentCardIndex}
+                initial={{ rotateY: 0 }}
+                animate={{ rotateY: showCardAnswer ? 180 : 0 }}
+                transition={{ duration: 0.6 }}
+                className="relative min-h-[300px]"
+                style={{ transformStyle: 'preserve-3d' }}
+              >
+                <div 
+                  className="absolute inset-0 p-8 bg-gradient-to-br from-blue-50 to-purple-50 dark:from-blue-950/30 dark:to-purple-950/30 rounded-xl border-2 border-blue-200 dark:border-blue-800 flex items-center justify-center cursor-pointer"
+                  style={{ 
+                    backfaceVisibility: 'hidden',
+                    transform: showCardAnswer ? 'rotateY(180deg)' : 'rotateY(0)'
+                  }}
+                  onClick={() => setShowCardAnswer(!showCardAnswer)}
+                >
+                  <div className="text-center space-y-4">
+                    <div className="text-sm font-semibold text-blue-600 dark:text-blue-400 uppercase tracking-wide">
+                      Question
+                    </div>
+                    <h3 className="text-2xl font-medium">{currentCard.question}</h3>
+                    {currentCard.hint && !showCardAnswer && (
+                      <p className="text-sm text-muted-foreground italic">
+                        Hint: {currentCard.hint}
+                      </p>
+                    )}
+                    <p className="text-sm text-muted-foreground mt-4">
+                      Click to reveal answer
+                    </p>
+                  </div>
+                </div>
+
+                <div 
+                  className="absolute inset-0 p-8 bg-gradient-to-br from-green-50 to-teal-50 dark:from-green-950/30 dark:to-teal-950/30 rounded-xl border-2 border-green-200 dark:border-green-800 flex items-center justify-center cursor-pointer"
+                  style={{ 
+                    backfaceVisibility: 'hidden',
+                    transform: showCardAnswer ? 'rotateY(0)' : 'rotateY(-180deg)'
+                  }}
+                  onClick={() => setShowCardAnswer(!showCardAnswer)}
+                >
+                  <div className="text-center space-y-4">
+                    <div className="text-sm font-semibold text-green-600 dark:text-green-400 uppercase tracking-wide">
+                      Answer
+                    </div>
+                    <h3 className="text-xl">{currentCard.answer}</h3>
+                    <p className="text-sm text-muted-foreground mt-4">
+                      Click to see question
+                    </p>
+                  </div>
+                </div>
+              </motion.div>
+
+              <div className="flex justify-between items-center">
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    if (currentCardIndex > 0) {
+                      setCurrentCardIndex(prev => prev - 1);
+                      setShowCardAnswer(false);
+                    }
+                  }}
+                  disabled={currentCardIndex === 0}
+                >
+                  Previous
+                </Button>
+
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    onClick={() => setShowCardAnswer(!showCardAnswer)}
+                  >
+                    {showCardAnswer ? 'Show Question' : 'Show Answer'}
+                  </Button>
+                </div>
+                
+                {currentCardIndex === currentDeckCards.length - 1 ? (
+                  <Button
+                    onClick={async () => {
+                      // Complete revision session
+                      if (currentSessionId && user) {
+                        try {
+                          await updateFlashcardReviewSession(currentSessionId, {
+                            cards_reviewed: currentDeckCards.length,
+                            completed_at: new Date().toISOString()
+                          });
+                          
+                          await updateFlashcardProgress(user.id, currentDeckCards[0].deck_id, {
+                            cards_reviewed: currentDeckCards.length
+                          });
+                        } catch (error) {
+                          console.error('Error updating review session:', error);
+                        }
+                      }
+                      
+                      setRevisionMode(false);
+                      setCurrentDeckCards([]);
+                      setCurrentCardIndex(0);
+                      toast.success('Revision session completed!');
+                    }}
+                    className="gradient-primary"
+                  >
+                    Complete Session
+                  </Button>
+                ) : (
+                  <Button 
+                    onClick={() => {
+                      setCurrentCardIndex(prev => prev + 1);
+                      setShowCardAnswer(false);
+                    }}
+                  >
+                    Next
+                  </Button>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    );
+  }
 
   // Practice Session View
   if (practiceMode && selectedCert && currentQuestions.length > 0) {
@@ -442,6 +911,9 @@ export function StudyHub({ user }: StudyHubProps) {
   return (
     <div className="min-h-screen pb-8 px-6 pt-8">
       <div className="max-w-7xl mx-auto space-y-8">
+        {/* Setup Guide - Shows if API not configured */}
+        <SetupGuide />
+        
         {/* Header */}
         <motion.div
           initial={{ opacity: 0, y: -20 }}
@@ -452,9 +924,31 @@ export function StudyHub({ user }: StudyHubProps) {
             <GraduationCap className="w-8 h-8 text-primary-solid" />
             <h1 className="text-5xl font-bold text-gradient-primary">Study Hub</h1>
           </div>
-          <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-            Master certifications with comprehensive courses, practice exams, and AI-powered study tools
-          </p>
+          
+          {/* Personalized Greeting */}
+          {user && !loadingUserData && (
+            <div className="space-y-2">
+              <h2 className="text-2xl font-medium">
+                Welcome back, {user.full_name || user.username || 'Student'}! 👋
+              </h2>
+              {userStats && userStats.total_sessions > 0 && (
+                <p className="text-muted-foreground">
+                  You've completed {userStats.total_sessions} practice sessions with an average score of {Math.round(userStats.average_score)}%
+                </p>
+              )}
+              {userStats && userStats.total_sessions === 0 && (
+                <p className="text-muted-foreground">
+                  Ready to start your certification journey? Let's begin with a practice session!
+                </p>
+              )}
+            </div>
+          )}
+          
+          {!user && (
+            <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
+              Master certifications with comprehensive courses, practice exams, and AI-powered study tools
+            </p>
+          )}
           
           {/* AI Helper Button */}
           <motion.div
@@ -597,17 +1091,19 @@ export function StudyHub({ user }: StudyHubProps) {
                       <Button
                         onClick={() => handleStartPractice(cert)}
                         className="w-full gradient-primary"
+                        disabled={loadingQuestions || !user}
                       >
                         <Play className="w-4 h-4 mr-2" />
-                        Practice
+                        {loadingQuestions ? 'Loading...' : 'Practice'}
                       </Button>
                       <Button
                         onClick={() => handleGenerateFlashcards(cert)}
                         variant="outline"
                         className="w-full"
+                        disabled={loadingFlashcards || !user}
                       >
                         <BookOpen className="w-4 h-4 mr-2" />
-                        Generate Flashcards
+                        {loadingFlashcards ? 'Generating...' : 'Generate Flashcards'}
                       </Button>
                     </div>
                   </CardContent>
@@ -651,9 +1147,10 @@ export function StudyHub({ user }: StudyHubProps) {
                     <Button
                       onClick={() => handleStartRevision(set)}
                       className="w-full gradient-secondary"
+                      disabled={loadingFlashcards || !user}
                     >
                       <BookOpen className="w-4 h-4 mr-2" />
-                      Study Cards
+                      {loadingFlashcards ? 'Loading...' : 'Study Cards'}
                     </Button>
                   </CardContent>
                 </Card>

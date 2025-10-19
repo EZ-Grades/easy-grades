@@ -51,9 +51,9 @@ export function CreativeDrawingCanvas({ isOpen, onClose }: CreativeDrawingCanvas
       const canvas = canvasRef.current;
       const ctx = canvas.getContext('2d');
       if (ctx) {
-        // Set canvas size
-        canvas.width = 800;
-        canvas.height = 600;
+        // Set canvas size to match calendar dimensions (wider aspect ratio)
+        canvas.width = 1000;
+        canvas.height = 800;
         
         // Set initial canvas background
         ctx.fillStyle = '#ffffff';
@@ -215,7 +215,7 @@ export function CreativeDrawingCanvas({ isOpen, onClose }: CreativeDrawingCanvas
             <motion.canvas
               ref={canvasRef}
               className="border-2 border-border rounded-lg cursor-crosshair bg-white"
-              style={{ maxWidth: '100%', maxHeight: '600px' }}
+              style={{ maxWidth: '100%', maxHeight: '800px' }}
               onMouseDown={startDrawing}
               onMouseMove={draw}
               onMouseUp={stopDrawing}

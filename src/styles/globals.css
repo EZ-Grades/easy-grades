@@ -3,6 +3,12 @@
 :root {
   --font-size: 16px;
   
+  /* Logo and Sidebar Dynamic Sizing */
+  --logo-container-size: 2.5rem; /* Default: w-10 h-10 = 2.5rem */
+  --sidebar-padding: 0.5rem; /* Padding on each side in collapsed state */
+  --sidebar-collapsed-width: calc(var(--logo-container-size) + (var(--sidebar-padding) * 2));
+  --sidebar-expanded-width: 16rem;
+  
   /* Luxury Light Mode Colors */
   --background: linear-gradient(135deg, #FFF8F0, #F2EDE6);
   --background-solid: #FFF8F0;
@@ -252,10 +258,46 @@
     box-shadow: 0 0 20px rgba(255, 211, 105, 0.4);
   }
   
-  /* Ensure sidebar visibility */
+  /* Sidebar Enhanced Styles */
   .sidebar-enhanced {
     background: var(--sidebar) !important;
     border-right: 1px solid var(--sidebar-border) !important;
+    transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  }
+  
+  /* Collapsed sidebar state - Equal padding on both sides */
+  [data-state="collapsed"] .sidebar-enhanced {
+    width: var(--sidebar-collapsed-width) !important;
+    min-width: var(--sidebar-collapsed-width) !important;
+  }
+  
+  /* Expanded sidebar state */
+  [data-state="expanded"] .sidebar-enhanced {
+    width: var(--sidebar-expanded-width) !important;
+  }
+  
+  /* Center menu buttons in collapsed state with equal padding */
+  [data-state="collapsed"] .sidebar-enhanced [data-sidebar="menu-button"] {
+    justify-content: center !important;
+    padding-left: 0.5rem !important;
+    padding-right: 0.5rem !important;
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+  }
+  
+  /* Center button content in collapsed state */
+  [data-state="collapsed"] .sidebar-enhanced [data-sidebar="menu-button"] > div {
+    justify-content: center !important;
+  }
+  
+  /* Hide text labels in collapsed state */
+  [data-state="collapsed"] .sidebar-enhanced [data-sidebar="menu-button"] span {
+    display: none !important;
+  }
+  
+  /* Enhanced tooltip visibility for collapsed state */
+  [data-sidebar="menu-button"][data-state="open"] {
+    z-index: 50;
   }
   
   /* Enhanced mobile navigation */

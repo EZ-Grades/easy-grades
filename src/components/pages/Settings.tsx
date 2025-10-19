@@ -50,7 +50,6 @@ import { Button } from '../ui/button';
 import { LuxuryButton } from '../LuxuryButton';
 import { LuxuryBadge } from '../LuxuryBadge';
 import { ThemeToggle } from '../ThemeToggle';
-import { AuthTest } from '../AuthTest';
 import { toast } from 'sonner@2.0.3';
 
 interface UserProfile {

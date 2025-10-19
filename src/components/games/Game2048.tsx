@@ -139,7 +139,10 @@ export function Game2048({ onComplete }: Game2048Props) {
       // Check if game is over
       if (isGameOver(newBoard)) {
         setGameOver(true);
-        setTimeout(() => onComplete(), 2000);
+        // Auto-restart after showing result
+        setTimeout(() => {
+          resetGame();
+        }, 3000);
       }
     }
   }, [board, gameOver, won, onComplete]);

@@ -40,6 +40,7 @@ const gameInfo = {
 export function GameContainer({ gameType, onClose }: GameContainerProps) {
   const [gameState, setGameState] = useState<'playing' | 'completed' | 'paused'>('playing');
   const [showConfirmExit, setShowConfirmExit] = useState(false);
+  const [gameKey, setGameKey] = useState(0); // Key to force game remount
   
   const info = gameInfo[gameType];
 
@@ -56,37 +57,42 @@ export function GameContainer({ gameType, onClose }: GameContainerProps) {
     onClose();
   };
 
+  const handleResetGame = () => {
+    setGameState('playing');
+    setGameKey(prev => prev + 1); // Increment key to force remount
+  };
+
   const renderGame = () => {
     switch (gameType) {
       case 'tic-tac-toe':
-        return <TicTacToeGame onComplete={() => setGameState('completed')} />;
+        return <TicTacToeGame key={gameKey} onComplete={() => setGameState('completed')} />;
       case 'sliding-puzzle':
-        return <SlidingPuzzleGame onComplete={() => setGameState('completed')} />;
+        return <SlidingPuzzleGame key={gameKey} onComplete={() => setGameState('completed')} />;
       case 'draw-guess':
-        return <DrawGuessGame onComplete={() => setGameState('completed')} />;
+        return <DrawGuessGame key={gameKey} onComplete={() => setGameState('completed')} />;
       case 'hangman':
-        return <HangmanGame onComplete={() => setGameState('completed')} />;
+        return <HangmanGame key={gameKey} onComplete={() => setGameState('completed')} />;
       case 'riddles':
-        return <RiddlesGame onComplete={() => setGameState('completed')} />;
+        return <RiddlesGame key={gameKey} onComplete={() => setGameState('completed')} />;
       case 'memory-cards':
-        return <MemoryCardsGame onComplete={() => setGameState('completed')} />;
+        return <MemoryCardsGame key={gameKey} onComplete={() => setGameState('completed')} />;
       case 'sudoku':
-        return <SudokuGame onComplete={() => setGameState('completed')} />;
+        return <SudokuGame key={gameKey} onComplete={() => setGameState('completed')} />;
       case '2048':
-        return <Game2048 onComplete={() => setGameState('completed')} />;
+        return <Game2048 key={gameKey} onComplete={() => setGameState('completed')} />;
       case 'connect-four':
-        return <ConnectFourGame onComplete={() => setGameState('completed')} />;
+        return <ConnectFourGame key={gameKey} onComplete={() => setGameState('completed')} />;
       case 'word-search':
-        return <WordSearchGame onComplete={() => setGameState('completed')} />;
+        return <WordSearchGame key={gameKey} onComplete={() => setGameState('completed')} />;
       default:
         return <div>Game not found</div>;
     }
   };
 
   return (
-    <div className="fixed inset-0 z-[9999] bg-gradient flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-[9999] bg-gradient overflow-y-auto">
       {/* Header Bar */}
-      <div className="absolute top-4 left-4 right-4 flex items-center justify-between z-10">
+      <div className="sticky top-0 left-0 right-0 bg-gradient/95 backdrop-blur-sm py-4 px-4 flex items-center justify-between z-10 border-b border-border/50">
         <div className="flex items-center gap-3">
           <div className="text-2xl">{info.emoji}</div>
           <h1 className="text-xl font-semibold text-gradient-primary">{info.title}</h1>
@@ -105,7 +111,7 @@ export function GameContainer({ gameType, onClose }: GameContainerProps) {
       </div>
 
       {/* Game Content */}
-      <div className="w-full max-w-4xl mx-auto mt-20">
+      <div className="w-full max-w-4xl mx-auto px-4 py-8 pb-16">
         <AnimatePresence mode="wait">
           <motion.div
             key={gameType}
@@ -213,10 +219,7 @@ export function GameContainer({ gameType, onClose }: GameContainerProps) {
                 <div className="flex gap-3">
                   <Button
                     variant="outline"
-                    onClick={() => {
-                      setGameState('playing');
-                      // Reset game state would go here
-                    }}
+                    onClick={handleResetGame}
                     className="flex-1"
                   >
                     <RotateCcw className="w-4 h-4" />

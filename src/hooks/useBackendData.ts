@@ -26,9 +26,20 @@ export function useTasks() {
   const fetchTasks = async () => {
     try {
       setLoading(true)
+      
+      // Get current authenticated user
+      const { data: { user }, error: authError } = await supabase.auth.getUser()
+      if (authError || !user) {
+        setTasks([])
+        setError(null)
+        setLoading(false)
+        return
+      }
+
       const { data, error } = await supabase
         .from('tasks')
         .select('*')
+        .eq('user_id', user.id)  // Filter by current user
         .order('created_at', { ascending: false })
       
       if (error) throw error
@@ -44,9 +55,21 @@ export function useTasks() {
 
   const createTask = async (taskData: Tables['tasks']['Insert']) => {
     try {
+      // Get current authenticated user
+      const { data: { user }, error: authError } = await supabase.auth.getUser()
+      if (authError || !user) {
+        return { success: false, error: 'User not authenticated' }
+      }
+
+      // Ensure the task is associated with the current user
+      const taskWithUser = {
+        ...taskData,
+        user_id: user.id
+      }
+
       const { data, error } = await supabase
         .from('tasks')
-        .insert([taskData])
+        .insert([taskWithUser])
         .select()
         .single()
       
@@ -61,10 +84,17 @@ export function useTasks() {
 
   const updateTask = async (id: string, updates: Tables['tasks']['Update']) => {
     try {
+      // Get current authenticated user
+      const { data: { user }, error: authError } = await supabase.auth.getUser()
+      if (authError || !user) {
+        return { success: false, error: 'User not authenticated' }
+      }
+
       const { error } = await supabase
         .from('tasks')
         .update(updates)
         .eq('id', id)
+        .eq('user_id', user.id) // Ensure user can only update their own tasks
       
       if (error) throw error
       await fetchTasks()
@@ -77,10 +107,17 @@ export function useTasks() {
 
   const deleteTask = async (id: string) => {
     try {
+      // Get current authenticated user
+      const { data: { user }, error: authError } = await supabase.auth.getUser()
+      if (authError || !user) {
+        return { success: false, error: 'User not authenticated' }
+      }
+
       const { error } = await supabase
         .from('tasks')
         .delete()
         .eq('id', id)
+        .eq('user_id', user.id) // Ensure user can only delete their own tasks
       
       if (error) throw error
       await fetchTasks()
@@ -115,6 +152,16 @@ export function useNotes() {
   const fetchNotes = async () => {
     try {
       setLoading(true)
+      
+      // Get current authenticated user
+      const { data: { user }, error: authError } = await supabase.auth.getUser()
+      if (authError || !user) {
+        setNotes([])
+        setError(null)
+        setLoading(false)
+        return
+      }
+
       const { data, error } = await supabase
         .from('notes')
         .select(`
@@ -126,6 +173,7 @@ export function useNotes() {
             icon
           )
         `)
+        .eq('user_id', user.id)  // Filter by current user
         .order('created_at', { ascending: false })
       
       if (error) throw error
@@ -141,9 +189,21 @@ export function useNotes() {
 
   const createNote = async (noteData: Tables['notes']['Insert']) => {
     try {
+      // Get current authenticated user
+      const { data: { user }, error: authError } = await supabase.auth.getUser()
+      if (authError || !user) {
+        return { success: false, error: 'User not authenticated' }
+      }
+
+      // Ensure the note is associated with the current user
+      const noteWithUser = {
+        ...noteData,
+        user_id: user.id
+      }
+
       const { data, error } = await supabase
         .from('notes')
-        .insert([noteData])
+        .insert([noteWithUser])
         .select()
         .single()
       
@@ -158,10 +218,17 @@ export function useNotes() {
 
   const updateNote = async (id: string, updates: Tables['notes']['Update']) => {
     try {
+      // Get current authenticated user
+      const { data: { user }, error: authError } = await supabase.auth.getUser()
+      if (authError || !user) {
+        return { success: false, error: 'User not authenticated' }
+      }
+
       const { error } = await supabase
         .from('notes')
         .update(updates)
         .eq('id', id)
+        .eq('user_id', user.id) // Ensure user can only update their own notes
       
       if (error) throw error
       await fetchNotes()
@@ -174,10 +241,17 @@ export function useNotes() {
 
   const deleteNote = async (id: string) => {
     try {
+      // Get current authenticated user
+      const { data: { user }, error: authError } = await supabase.auth.getUser()
+      if (authError || !user) {
+        return { success: false, error: 'User not authenticated' }
+      }
+
       const { error } = await supabase
         .from('notes')
         .delete()
         .eq('id', id)
+        .eq('user_id', user.id) // Ensure user can only delete their own notes
       
       if (error) throw error
       await fetchNotes()

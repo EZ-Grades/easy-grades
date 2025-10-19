@@ -1,21 +1,15 @@
 import React, { useState, useEffect } from 'react';
-import { CheckSquare, BookOpen, Target, Clock, TrendingUp, Plus, Play, Sparkles, Timer, Quote } from 'lucide-react';
+import { CheckSquare, BookOpen, Target, Clock, TrendingUp, Plus, Play, Pause, Timer, Flame } from 'lucide-react';
 import { motion } from 'motion/react';
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/card"
 import { Button } from "../ui/button"
 import { Progress } from "../ui/progress"
-import { Input } from "../ui/input"
-import { Textarea } from "../ui/textarea"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "../ui/dialog"
-import { Label } from "../ui/label"
-
 import { toast } from 'sonner@2.0.3';
-import { Badge } from "../ui/badge";
-import { MotivationalQuotes } from '../features/MotivationalQuotes';
+import { DailyInspiration } from '../DailyInspiration';
 import { DrawingCanvas } from '../features/DrawingCanvas';
-import { CalendarWidget } from '../CalendarWidget';
-import { useTasks, useNotes, useStudySessions } from '../../hooks/useBackendData';
-import { mockDataService } from '../../services/mockDataService';
+import { AdvancedCalendar } from '../AdvancedCalendar';
+import { AddTaskDialog } from '../AddTaskDialog';
+import { AddNoteDialog } from '../AddNoteDialog';
 import backendService from '../../services/backendService';
 
 interface Task {
@@ -36,47 +30,43 @@ interface DashboardProps {
   user?: any;
 }
 
-
-
 export function Dashboard({ user }: DashboardProps) {
-  const [currentStreak, setCurrentStreak] = useState(0)
-  const [tasks, setTasks] = useState<Task[]>([])
-  const [notes, setNotes] = useState<Note[]>([])
-  const [newTaskTitle, setNewTaskTitle] = useState('')
-  const [newNoteTitle, setNewNoteTitle] = useState('')
-  const [newNoteContent, setNewNoteContent] = useState('')
-  const [isTaskDialogOpen, setIsTaskDialogOpen] = useState(false)
-  const [isNoteDialogOpen, setIsNoteDialogOpen] = useState(false)
-  const [timerMinutes, setTimerMinutes] = useState(25)
-  const [timerSeconds, setTimerSeconds] = useState(0)
-  const [isTimerRunning, setIsTimerRunning] = useState(false)
-  const [loading, setLoading] = useState(true)
-  const [taskStats, setTaskStats] = useState({ total: 0, completed: 0, percentage: 0 })
-  const [completedSessions, setCompletedSessions] = useState(0)
-  const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date())
+  // Stats state
+  const [currentStreak, setCurrentStreak] = useState(0);
+  const [focusHours, setFocusHours] = useState(0);
+  const [completedSessions, setCompletedSessions] = useState(0);
   
-  // Calendar integration states
-  const [calendarEvents, setCalendarEvents] = useState<any[]>([
-    { id: '1', title: 'Study Session', date: new Date(), emoji: '📚' },
-    { id: '2', title: 'Break Time', date: new Date(Date.now() + 86400000), emoji: '☕' },
-  ])
+  // Data state
+  const [tasks, setTasks] = useState<Task[]>([]);
+  const [notes, setNotes] = useState<Note[]>([]);
+  
+  // Timer state
+  const [timerMinutes, setTimerMinutes] = useState(25);
+  const [timerSeconds, setTimerSeconds] = useState(0);
+  const [isTimerRunning, setIsTimerRunning] = useState(false);
+  
+  const [loading, setLoading] = useState(true);
 
+  const completedTasks = tasks.filter(task => task.completed).length;
+  const totalTasks = tasks.length;
 
-  const completedTasks = tasks.filter(task => task.completed).length
-  const totalTasks = tasks.length
-
-  // Load user data when component mounts or user changes
+  // ============================================
+  // 1. LOAD DATA ON DASHBOARD MOUNT
+  // ============================================
   useEffect(() => {
     const loadUserData = async () => {
       if (!user) {
+        // GUEST USER - No backend calls
         setLoading(false);
         return;
       }
 
       try {
         setLoading(true);
-        
-        // Load tasks with fallback
+
+        // LOGGED-IN USER - Fetch from backend
+
+        // Fetch Tasks
         try {
           const tasksResult = await backendService.tasks.getUserTasks(user.id);
           if (tasksResult.data) {
@@ -89,26 +79,9 @@ export function Dashboard({ user }: DashboardProps) {
           }
         } catch (error) {
           console.error('Error loading tasks:', error);
-          // Set demo tasks for demo purposes
-          setTasks([
-            { id: '1', title: 'Complete React tutorial', completed: false, createdAt: new Date() },
-            { id: '2', title: 'Review JavaScript concepts', completed: true, createdAt: new Date() },
-            { id: '3', title: 'Practice coding exercises', completed: false, createdAt: new Date() },
-          ]);
         }
 
-        // Load task stats with fallback
-        try {
-          const statsResult = await backendService.tasks.getTaskStats(user.id);
-          if (statsResult.data) {
-            setTaskStats(statsResult.data);
-          }
-        } catch (error) {
-          console.error('Error loading task stats:', error);
-          setTaskStats({ total: 3, completed: 1, percentage: 33 });
-        }
-
-        // Load notes with fallback
+        // Fetch Notes
         try {
           const notesResult = await backendService.notes.getUserNotes(user.id);
           if (notesResult.data) {
@@ -121,25 +94,18 @@ export function Dashboard({ user }: DashboardProps) {
           }
         } catch (error) {
           console.error('Error loading notes:', error);
-          // Set demo note
-          setNotes([
-            { id: '1', title: 'Study Notes', content: 'Remember to review the key concepts from today\'s session.', createdAt: new Date() },
-          ]);
         }
 
-
-
-        // Load focus session stats for streak with fallback
+        // Fetch Streak & Focus stats
         try {
           const focusStatsResult = await backendService.focusSessions.getSessionStats(user.id);
           if (focusStatsResult.data) {
-            setCurrentStreak(focusStatsResult.data.currentStreak);
-            setCompletedSessions(focusStatsResult.data.totalSessions);
+            setCurrentStreak(focusStatsResult.data.currentStreak || 0);
+            setCompletedSessions(focusStatsResult.data.totalSessions || 0);
+            setFocusHours(Math.round((focusStatsResult.data.totalSessions || 0) * 25 / 60));
           }
         } catch (error) {
           console.error('Error loading focus stats:', error);
-          setCurrentStreak(7); // Demo streak
-          setCompletedSessions(12); // Demo sessions
         }
 
       } catch (error) {
@@ -153,8 +119,12 @@ export function Dashboard({ user }: DashboardProps) {
     loadUserData();
   }, [user]);
 
+  // ============================================
+  // 2. FOCUS TIMER - Start / Pause / Resume / Reset
+  // ============================================
   useEffect(() => {
     let interval: NodeJS.Timeout | null = null;
+    
     if (isTimerRunning && (timerMinutes > 0 || timerSeconds > 0)) {
       interval = setInterval(() => {
         if (timerSeconds > 0) {
@@ -165,120 +135,51 @@ export function Dashboard({ user }: DashboardProps) {
         }
       }, 1000);
     } else if (isTimerRunning && timerMinutes === 0 && timerSeconds === 0) {
+      // Timer reached 00:00
       setIsTimerRunning(false);
-      toast.success('Focus session completed! Great job!');
-      
-      // Update daily session stats if user is logged in
-      if (user) {
-        backendService.dailySessions.updateDailyStats(user.id, completedSessions + 1, (completedSessions + 1) * 25)
-          .catch(error => console.error('Error updating daily stats:', error));
-      }
+      handleSessionComplete();
     }
+
     return () => {
       if (interval) clearInterval(interval);
     };
-  }, [timerMinutes, timerSeconds, isTimerRunning, user, completedSessions]);
+  }, [timerMinutes, timerSeconds, isTimerRunning]);
 
-  const handleAddTask = async () => {
-    if (!newTaskTitle.trim()) return;
-    
-    if (!user) {
-      toast.error('Please log in to add tasks');
-      return;
-    }
+  const handleSessionComplete = async () => {
+    toast.success('Focus session completed! 🎉', {
+      description: 'Great job staying focused!'
+    });
 
-    try {
-      const result = await backendService.tasks.addTask(user.id, newTaskTitle.trim());
-      if (result.success && result.data) {
-        const newTask: Task = {
-          id: result.data.id,
-          title: result.data.title,
-          completed: result.data.completed,
-          createdAt: new Date(result.data.created_at)
-        };
-        setTasks([...tasks, newTask]);
-        setNewTaskTitle('');
-        setIsTaskDialogOpen(false);
-        toast.success('Task added successfully!');
-
-        // Update task stats
-        const statsResult = await backendService.tasks.getTaskStats(user.id);
-        if (statsResult.data) {
-          setTaskStats(statsResult.data);
-        }
-      } else {
-        toast.error(result.error?.message || 'Failed to add task');
-      }
-    } catch (error) {
-      console.error('Error adding task:', error);
-      toast.error('Failed to add task');
-    }
-  };
-
-  const handleAddNote = async () => {
-    if (!newNoteTitle.trim() || !newNoteContent.trim()) return;
-    
-    if (!user) {
-      toast.error('Please log in to add notes');
-      return;
-    }
-
-    try {
-      const result = await backendService.notes.addNote(user.id, newNoteTitle.trim(), newNoteContent.trim());
-      if (result.success && result.data) {
-        const newNote: Note = {
-          id: result.data.id,
-          title: result.data.title,
-          content: result.data.content || '',
-          createdAt: new Date(result.data.created_at)
-        };
-        setNotes([...notes, newNote]);
-        setNewNoteTitle('');
-        setNewNoteContent('');
-        setIsNoteDialogOpen(false);
-        toast.success('Note added successfully!');
-      } else {
-        toast.error(result.error?.message || 'Failed to add note');
-      }
-    } catch (error) {
-      console.error('Error adding note:', error);
-      toast.error('Failed to add note');
-    }
-  };
-
-  const toggleTask = async (taskId: string) => {
-    const task = tasks.find(t => t.id === taskId);
-    if (!task || !user) return;
-
-    try {
-      const result = await backendService.tasks.updateTaskCompletion(taskId, !task.completed);
-      if (result.success) {
-        setTasks(tasks.map(t => 
-          t.id === taskId ? { ...t, completed: !t.completed } : t
-        ));
+    if (user) {
+      // LOGGED-IN USER - Update backend
+      try {
+        // Record session (increments Study Sessions)
+        await backendService.focusSessions.recordSession(user.id, 25);
         
-        // Update task stats
-        const statsResult = await backendService.tasks.getTaskStats(user.id);
-        if (statsResult.data) {
-          setTaskStats(statsResult.data);
-        }
+        // Update daily stats (increments Focus Hours)
+        const newSessionCount = completedSessions + 1;
+        await backendService.dailySessions.updateDailyStats(user.id, newSessionCount, newSessionCount * 25);
         
-        toast.success(task.completed ? 'Task marked as incomplete' : 'Task completed!');
-      } else {
-        toast.error(result.error?.message || 'Failed to update task');
+        // Reload stats to get updated streak and sessions
+        const focusStatsResult = await backendService.focusSessions.getSessionStats(user.id);
+        if (focusStatsResult.data) {
+          setCurrentStreak(focusStatsResult.data.currentStreak || 0);
+          setCompletedSessions(focusStatsResult.data.totalSessions || 0);
+          setFocusHours(Math.round((focusStatsResult.data.totalSessions || 0) * 25 / 60));
+        }
+      } catch (error) {
+        console.error('Error saving session:', error);
       }
-    } catch (error) {
-      console.error('Error updating task:', error);
-      toast.error('Failed to update task');
     }
+    // GUEST USER - No persistence
   };
 
   const startTimer = () => {
     setIsTimerRunning(true);
-    toast.success('Focus session started!');
+    toast.success('Focus session started! 🎯');
   };
 
-  const stopTimer = () => {
+  const pauseTimer = () => {
     setIsTimerRunning(false);
     toast.info('Focus session paused');
   };
@@ -289,41 +190,67 @@ export function Dashboard({ user }: DashboardProps) {
     setIsTimerRunning(false);
   };
 
+  // ============================================
+  // 3. ADD NEW TASK
+  // ============================================
+  const handleTaskAdded = async (task: any) => {
+    const newTask: Task = {
+      id: task.id,
+      title: task.title,
+      completed: task.completed || false,
+      createdAt: new Date(task.created_at || Date.now())
+    };
+    
+    // Show in UI instantly
+    setTasks([...tasks, newTask]);
+  };
 
+  // ============================================
+  // 4. TOGGLE TASK COMPLETION
+  // ============================================
+  const toggleTask = async (taskId: string) => {
+    const task = tasks.find(t => t.id === taskId);
+    if (!task) return;
 
-  const handleQuickAction = (action: string, user?: any) => {
-    switch (action) {
-      case 'start-session':
-        startTimer();
-        break;
-      case 'schedule':
-        // Navigate to calendar/schedule feature
-        toast.info('Calendar feature is now available in the dashboard!', {
-          description: 'Use the calendar widget to track your study schedule.',
-        });
-        break;
-      case 'generate-flashcards':
-        if (user) {
-          // Navigate to StudyHub for flashcard generation
-          toast.success('Redirecting to StudyHub for AI flashcard generation!');
-          // Dispatch custom event to navigate to StudyHub
-          const event = new CustomEvent('navigate-to-studyhub');
-          window.dispatchEvent(event);
+    if (user) {
+      // LOGGED-IN USER - Update backend
+      try {
+        const result = await backendService.tasks.updateTaskCompletion(taskId, !task.completed);
+        if (result.success) {
+          // Update UI
+          setTasks(tasks.map(t => 
+            t.id === taskId ? { ...t, completed: !t.completed } : t
+          ));
+          toast.success(task.completed ? 'Task marked as incomplete 🔁' : 'Task completed! ✅');
         } else {
-          toast.info('Sign in to access AI flashcard generation', {
-            action: {
-              label: 'Sign In',
-              onClick: () => {
-                const event = new CustomEvent('navigate-to-login');
-                window.dispatchEvent(event);
-              }
-            }
-          });
+          toast.error('Failed to update task');
         }
-        break;
-      default:
-        toast.info('Feature coming soon!');
+      } catch (error) {
+        console.error('Error updating task:', error);
+        toast.error('Failed to update task');
+      }
+    } else {
+      // GUEST USER - Toggle locally (no backend)
+      setTasks(tasks.map(t => 
+        t.id === taskId ? { ...t, completed: !t.completed } : t
+      ));
+      toast.success(task.completed ? 'Task marked as incomplete 🔁' : 'Task completed! ✅');
     }
+  };
+
+  // ============================================
+  // 5. ADD NEW NOTE
+  // ============================================
+  const handleNoteAdded = (note: any) => {
+    const newNote: Note = {
+      id: note.id,
+      title: note.title,
+      content: note.content || '',
+      createdAt: new Date(note.created_at || Date.now())
+    };
+
+    // Append to notes list
+    setNotes([...notes, newNote]);
   };
 
   return (
@@ -335,91 +262,106 @@ export function Dashboard({ user }: DashboardProps) {
         transition={{ duration: 0.6 }}
         className="text-center mb-8"
       >
-        <h1 className="text-4xl mb-2 text-gradient-primary">
-          Welcome back{user ? `, ${user.full_name?.split(' ')[0] || user.email.split('@')[0]}` : ''}!
-        </h1>
+        <div className="flex items-center justify-center gap-3 mb-2">
+          <h1 className="text-5xl font-bold text-gradient-primary">
+            Welcome back{user ? `, ${user.full_name?.split(' ')[0] || user.email?.split('@')[0]}` : ''}!
+          </h1>
+        </div>
         <p className="text-lg text-muted-foreground">
           Ready to make today productive? Let's continue your learning journey.
         </p>
       </motion.div>
 
-
-
-      {/* Stats Overview */}
-      <motion.div 
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.6, delay: 0.2 }}
-        className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8"
-      >
-        <motion.div
-          whileHover={{ scale: 1.02, y: -2 }}
-          transition={{ duration: 0.2 }}
+      {/* Stats - Only show for logged-in users */}
+      {user && (
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 0.2 }}
+          className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8"
         >
-          <Card className="glassmorphism border-0 hover:glow-highlight">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-muted-foreground">Current Streak</p>
-                  <p className="text-2xl font-bold text-gradient-highlight">{currentStreak} days</p>
+          {/* Current Streak */}
+          <motion.div
+            whileHover={{ scale: 1.05, y: -4 }}
+            transition={{ duration: 0.3 }}
+          >
+            <Card className="glassmorphism border-0 hover:glow-highlight transition-all">
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-muted-foreground">Streak Days</p>
+                    <p className="text-3xl font-bold text-gradient-highlight">{currentStreak} days</p>
+                  </div>
+                  <div className="relative">
+                    <Flame className="w-10 h-10 text-orange-500" />
+                    {currentStreak > 0 && (
+                      <motion.div
+                        animate={{ scale: [1, 1.2, 1] }}
+                        transition={{ duration: 2, repeat: Infinity }}
+                        className="absolute -top-1 -right-1 w-3 h-3 bg-orange-500 rounded-full"
+                      />
+                    )}
+                  </div>
                 </div>
-                <Target className="w-8 h-8 text-amber-600" />
-              </div>
-            </CardContent>
-          </Card>
-        </motion.div>
+              </CardContent>
+            </Card>
+          </motion.div>
 
-        <motion.div
-          whileHover={{ scale: 1.02, y: -2 }}
-          transition={{ duration: 0.2 }}
-        >
-          <Card className="glassmorphism border-0 hover:glow-primary">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-muted-foreground">Focus Time</p>
-                  <p className="text-2xl font-bold text-gradient-primary">{Math.round((completedSessions * 25) / 60)}h</p>
+          {/* Focus Hours */}
+          <motion.div
+            whileHover={{ scale: 1.05, y: -4 }}
+            transition={{ duration: 0.3 }}
+          >
+            <Card className="glassmorphism border-0 hover:glow-primary transition-all">
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-muted-foreground">Focus Hours</p>
+                    <p className="text-3xl font-bold text-gradient-primary">{focusHours}h</p>
+                  </div>
+                  <Clock className="w-10 h-10 text-blue-600" />
                 </div>
-                <TrendingUp className="w-8 h-8 text-blue-600" />
-              </div>
-            </CardContent>
-          </Card>
-        </motion.div>
+              </CardContent>
+            </Card>
+          </motion.div>
 
-        <motion.div
-          whileHover={{ scale: 1.02, y: -2 }}
-          transition={{ duration: 0.2 }}
-        >
-          <Card className="glassmorphism border-0 hover:glow-secondary">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-muted-foreground">Tasks Completed</p>
-                  <p className="text-2xl font-bold text-gradient-secondary">{completedTasks}/{totalTasks}</p>
+          {/* Completed Tasks */}
+          <motion.div
+            whileHover={{ scale: 1.05, y: -4 }}
+            transition={{ duration: 0.3 }}
+          >
+            <Card className="glassmorphism border-0 hover:glow-secondary transition-all">
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-muted-foreground">Completed Tasks</p>
+                    <p className="text-3xl font-bold text-gradient-secondary">{completedTasks}/{totalTasks}</p>
+                  </div>
+                  <CheckSquare className="w-10 h-10 text-green-600" />
                 </div>
-                <CheckSquare className="w-8 h-8 text-green-600" />
-              </div>
-            </CardContent>
-          </Card>
-        </motion.div>
+              </CardContent>
+            </Card>
+          </motion.div>
 
-        <motion.div
-          whileHover={{ scale: 1.02, y: -2 }}
-          transition={{ duration: 0.2 }}
-        >
-          <Card className="glassmorphism border-0 hover:glow-primary">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-muted-foreground">Study Sessions</p>
-                  <p className="text-2xl font-bold text-gradient-primary">{completedSessions}</p>
+          {/* Study Sessions */}
+          <motion.div
+            whileHover={{ scale: 1.05, y: -4 }}
+            transition={{ duration: 0.3 }}
+          >
+            <Card className="glassmorphism border-0 hover:glow-primary transition-all">
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-muted-foreground">Study Sessions</p>
+                    <p className="text-3xl font-bold text-gradient-primary">{completedSessions}</p>
+                  </div>
+                  <Target className="w-10 h-10 text-purple-600" />
                 </div>
-                <Clock className="w-8 h-8 text-purple-600" />
-              </div>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
+          </motion.div>
         </motion.div>
-      </motion.div>
+      )}
 
       {/* Main Content Grid - Timer, Tasks, Notes */}
       <motion.div 
@@ -428,262 +370,168 @@ export function Dashboard({ user }: DashboardProps) {
         transition={{ duration: 0.6, delay: 0.3 }}
         className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 mb-8"
       >
-        {/* Column 1 - Timer */}
-        <div className="space-y-6">
-          {/* Focus Timer */}
-          <Card className="glassmorphism border-0">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Timer className="w-5 h-5" />
-                Focus Timer
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-center space-y-4">
-                <div className="text-6xl font-mono font-bold text-center mb-4 text-gradient-primary">
-                  {String(timerMinutes).padStart(2, '0')}:{String(timerSeconds).padStart(2, '0')}
-                </div>
-                <Progress 
-                  value={((25 * 60) - (timerMinutes * 60 + timerSeconds)) / (25 * 60) * 100} 
-                  className="h-2" 
-                />
-                <div className="flex justify-center gap-2">
-                  {!isTimerRunning ? (
-                    <Button onClick={startTimer} className="gradient-primary">
-                      <Play className="w-4 h-4 mr-2" />
-                      Start
-                    </Button>
-                  ) : (
-                    <Button onClick={stopTimer} variant="outline">
-                      <Clock className="w-4 h-4 mr-2" />
-                      Pause
-                    </Button>
-                  )}
-                  <Button onClick={resetTimer} variant="outline" size="sm">
-                    Reset
-                  </Button>
-                </div>
+        {/* Focus Timer */}
+        <Card className="glassmorphism border-0 flex flex-col">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Timer className="w-5 h-5" />
+              Focus Timer
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="flex-1 flex flex-col justify-center">
+            <div className="text-center space-y-6">
+              <div className="text-7xl font-mono font-bold text-gradient-primary">
+                {String(timerMinutes).padStart(2, '0')}:{String(timerSeconds).padStart(2, '0')}
               </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Column 2 - Tasks */}
-        <div className="space-y-6">
-          <Card className="glassmorphism border-0">
-            <CardHeader>
-              <CardTitle className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <CheckSquare className="w-5 h-5" />
-                  Tasks ({tasks.filter(t => !t.completed).length} pending)
-                </div>
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <Dialog open={isTaskDialogOpen} onOpenChange={setIsTaskDialogOpen}>
-                <DialogTrigger asChild>
-                  <Button variant="outline" className="w-full justify-start gradient-primary text-white border-0">
-                    <Plus className="w-4 h-4 mr-2" />
-                    Add New Task
+              <Progress 
+                value={((25 * 60) - (timerMinutes * 60 + timerSeconds)) / (25 * 60) * 100} 
+                className="h-3" 
+              />
+              <div className="flex justify-center gap-3">
+                {!isTimerRunning ? (
+                  <Button onClick={startTimer} className="gradient-primary">
+                    <Play className="w-4 h-4 mr-2" />
+                    Start
                   </Button>
-                </DialogTrigger>
-                <DialogContent className="glassmorphism">
-                  <DialogHeader>
-                    <DialogTitle>Add New Task</DialogTitle>
-                    <DialogDescription>
-                      Create a new task to add to your daily todo list.
-                    </DialogDescription>
-                  </DialogHeader>
-                  <div className="space-y-4">
-                    <div>
-                      <Label htmlFor="task-title">Task Title</Label>
-                      <Input
-                        id="task-title"
-                        value={newTaskTitle}
-                        onChange={(e) => setNewTaskTitle(e.target.value)}
-                        placeholder="Enter task title..."
-                        onKeyPress={(e) => e.key === 'Enter' && handleAddTask()}
-                      />
-                    </div>
-                    <div className="flex gap-2">
-                      <Button onClick={handleAddTask} className="gradient-primary flex-1">
-                        Add Task
-                      </Button>
-                      <Button variant="outline" onClick={() => setIsTaskDialogOpen(false)}>
-                        Cancel
-                      </Button>
-                    </div>
-                  </div>
-                </DialogContent>
-              </Dialog>
-              
-              <div className="space-y-2 max-h-64 overflow-y-auto">
-                {tasks.length > 0 ? (
-                  tasks.map((task) => (
-                    <motion.div
-                      key={task.id}
-                      initial={{ opacity: 0, x: -20 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      className={`flex items-center gap-3 p-3 rounded-lg border transition-all ${
-                        task.completed 
-                          ? 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800' 
-                          : 'bg-white/50 dark:bg-white/5 border-border'
+                ) : (
+                  <Button onClick={pauseTimer} variant="outline">
+                    <Pause className="w-4 h-4 mr-2" />
+                    Pause
+                  </Button>
+                )}
+                <Button onClick={resetTimer} variant="outline">
+                  Reset
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Tasks */}
+        <Card className="glassmorphism border-0 flex flex-col">
+          <CardHeader>
+            <CardTitle className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <CheckSquare className="w-5 h-5" />
+                Tasks ({tasks.filter(t => !t.completed).length} pending)
+              </div>
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4 flex-1 flex flex-col">
+            <AddTaskDialog 
+              userId={user?.id} 
+              onTaskAdded={handleTaskAdded}
+            />
+            
+            <div className="space-y-2 max-h-72 overflow-y-auto pr-2">
+              {tasks.length > 0 ? (
+                tasks.map((task) => (
+                  <motion.div
+                    key={task.id}
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    className={`flex items-center gap-3 p-3 rounded-lg border transition-all ${
+                      task.completed 
+                        ? 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800' 
+                        : 'bg-white/50 dark:bg-white/5 border-border hover:bg-white/70 dark:hover:bg-white/10'
+                    }`}
+                  >
+                    <button
+                      onClick={() => toggleTask(task.id)}
+                      className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-all ${
+                        task.completed
+                          ? 'bg-green-500 border-green-500 text-white'
+                          : 'border-gray-300 hover:border-green-400'
                       }`}
                     >
-                      <button
-                        onClick={() => toggleTask(task.id)}
-                        className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-all ${
-                          task.completed
-                            ? 'bg-green-500 border-green-500 text-white'
-                            : 'border-gray-300 hover:border-green-400'
-                        }`}
-                      >
-                        {task.completed && <CheckSquare className="w-3 h-3" />}
-                      </button>
-                      <span className={`flex-1 ${task.completed ? 'line-through text-muted-foreground' : ''}`}>
-                        {task.title}
-                      </span>
-                    </motion.div>
-                  ))
-                ) : (
-                  <div className="text-center py-8 text-muted-foreground">
-                    <CheckSquare className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                    <p>Your tasks will appear here</p>
-                  </div>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+                      {task.completed && <CheckSquare className="w-3 h-3" />}
+                    </button>
+                    <span className={`flex-1 ${task.completed ? 'line-through text-muted-foreground' : ''}`}>
+                      {task.title}
+                    </span>
+                  </motion.div>
+                ))
+              ) : (
+                <div className="text-center py-8 text-muted-foreground">
+                  <CheckSquare className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                  <p>No tasks yet</p>
+                  <p className="text-sm mt-2">Add your first task!</p>
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
 
-        {/* Column 3 - Notes */}
-        <div className="space-y-6">
-          <Card className="glassmorphism border-0">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <BookOpen className="w-5 h-5" />
-                Quick Notes
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <Dialog open={isNoteDialogOpen} onOpenChange={setIsNoteDialogOpen}>
-                <DialogTrigger asChild>
-                  <Button variant="outline" className="w-full justify-start gradient-secondary text-white border-0">
-                    <Plus className="w-4 h-4 mr-2" />
-                    Add New Note
-                  </Button>
-                </DialogTrigger>
-                <DialogContent className="glassmorphism">
-                  <DialogHeader>
-                    <DialogTitle>Add New Note</DialogTitle>
-                    <DialogDescription>
-                      Create a quick note to remember important information.
-                    </DialogDescription>
-                  </DialogHeader>
-                  <div className="space-y-4">
-                    <div>
-                      <Label htmlFor="note-title">Note Title</Label>
-                      <Input
-                        id="note-title"
-                        value={newNoteTitle}
-                        onChange={(e) => setNewNoteTitle(e.target.value)}
-                        placeholder="Enter note title..."
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="note-content">Content</Label>
-                      <Textarea
-                        id="note-content"
-                        value={newNoteContent}
-                        onChange={(e) => setNewNoteContent(e.target.value)}
-                        placeholder="Enter note content..."
-                        rows={4}
-                      />
-                    </div>
-                    <div className="flex gap-2">
-                      <Button onClick={handleAddNote} className="gradient-secondary flex-1">
-                        Add Note
-                      </Button>
-                      <Button variant="outline" onClick={() => setIsNoteDialogOpen(false)}>
-                        Cancel
-                      </Button>
-                    </div>
-                  </div>
-                </DialogContent>
-              </Dialog>
-              
-              <div className="space-y-2 max-h-64 overflow-y-auto">
-                {notes.length > 0 ? (
-                  notes.map((note) => (
-                    <motion.div
-                      key={note.id}
-                      initial={{ opacity: 0, x: -20 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      className="p-3 rounded-lg bg-white/50 dark:bg-white/5 border border-border"
-                    >
-                      <h4 className="font-medium mb-1">{note.title}</h4>
-                      <p className="text-sm text-muted-foreground line-clamp-2">{note.content}</p>
-                    </motion.div>
-                  ))
-                ) : (
-                  <div className="text-center py-8 text-muted-foreground">
-                    <BookOpen className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                    <p>Your notes will appear here</p>
-                  </div>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+        {/* Notes */}
+        <Card className="glassmorphism border-0 flex flex-col">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <BookOpen className="w-5 h-5" />
+              Quick Notes
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4 flex-1 flex flex-col">
+            <AddNoteDialog 
+              userId={user?.id} 
+              onNoteAdded={handleNoteAdded}
+            />
+            
+            <div className="space-y-2 max-h-72 overflow-y-auto pr-2">
+              {notes.length > 0 ? (
+                notes.map((note) => (
+                  <motion.div
+                    key={note.id}
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    className="p-3 rounded-lg bg-white/50 dark:bg-white/5 border border-border hover:bg-white/70 dark:hover:bg-white/10 transition-all"
+                  >
+                    <h4 className="font-medium mb-1">{note.title}</h4>
+                    <p className="text-sm text-muted-foreground line-clamp-2">{note.content}</p>
+                  </motion.div>
+                ))
+              ) : (
+                <div className="text-center py-8 text-muted-foreground">
+                  <BookOpen className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                  <p>No notes yet</p>
+                  <p className="text-sm mt-2">Create your first note!</p>
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
       </motion.div>
 
-      {/* Calendar & Drawing Canvas Section - Centered Below */}
+      {/* 6. Calendar & Drawing Canvas */}
       <motion.div 
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.6, delay: 0.4 }}
         className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8"
       >
-        {/* Cute Calendar Widget - Pinterest Style */}
+        {/* Calendar - Create events, mark sessions */}
         <div className="flex justify-center">
-          <CalendarWidget 
-            events={calendarEvents}
-            onEventAdd={(event) => {
-              const newEvent = {
-                ...event,
-                id: Date.now().toString()
-              };
-              setCalendarEvents(prev => [...prev, newEvent]);
-              toast.success('Event added!');
-            }}
-            onEventUpdate={(id, updates) => {
-              setCalendarEvents(prev => 
-                prev.map(event => 
-                  event.id === id ? { ...event, ...updates } : event
-                )
-              );
-            }}
-            className="w-full max-w-md"
-          />
+          <div className="w-full max-w-2xl">
+            <AdvancedCalendar />
+          </div>
         </div>
 
-        {/* Creative Drawing Canvas */}
+        {/* Drawing Canvas - Edit canvas, save/export */}
         <div className="flex justify-center">
-          <div className="w-full max-w-md">
-            <DrawingCanvas width={350} height={250} />
+          <div className="w-full max-w-2xl">
+            <DrawingCanvas width={672} height={550} />
           </div>
         </div>
       </motion.div>
 
-      {/* Daily Inspiration - Moved to Bottom */}
+      {/* 9. Daily Inspiration - Fetch and display quote */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.6, delay: 0.4 }}
+        transition={{ duration: 0.6, delay: 0.5 }}
         className="mt-8"
       >
-        <MotivationalQuotes />
+        <DailyInspiration />
       </motion.div>
     </div>
-  )
+  );
 }

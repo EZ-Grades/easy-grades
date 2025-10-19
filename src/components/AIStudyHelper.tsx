@@ -20,6 +20,7 @@ import { Input } from './ui/input';
 import { Badge } from './ui/badge';
 import { Textarea } from './ui/textarea';
 import { toast } from 'sonner@2.0.3';
+import { getStudyAssistance, isPerplexityConfigured, getConfigurationError } from '../services/perplexityService';
 
 interface Message {
   id: string;
@@ -67,6 +68,12 @@ export function AIStudyHelper({ className = '', isOpen = false, onClose }: AIStu
   const sendMessage = async (message: string = inputMessage) => {
     if (!message.trim() || isLoading) return;
 
+    // Check if Perplexity is configured
+    if (!isPerplexityConfigured()) {
+      toast.error(getConfigurationError());
+      return;
+    }
+
     const userMessage: Message = {
       id: Date.now().toString(),
       type: 'user',
@@ -80,20 +87,33 @@ export function AIStudyHelper({ className = '', isOpen = false, onClose }: AIStu
     setIsTyping(true);
 
     try {
-      // Simulate AI response with Perplexity-style formatting
-      const response = await simulateAIResponse(message.trim());
+      // Get conversation history for context
+      const conversationHistory = messages.map(msg => ({
+        role: msg.type === 'user' ? 'user' as const : 'assistant' as const,
+        content: msg.content
+      }));
+
+      // Call real Perplexity API
+      const { data, error } = await getStudyAssistance(
+        message.trim(),
+        undefined,
+        conversationHistory
+      );
+
+      if (error || !data) {
+        throw new Error(error || 'Failed to get AI response');
+      }
       
       const assistantMessage: Message = {
         id: (Date.now() + 1).toString(),
         type: 'assistant',
-        content: response.content,
+        content: data,
         timestamp: new Date(),
-        sources: response.sources,
       };
 
       setMessages(prev => [...prev, assistantMessage]);
       
-    } catch (error) {
+    } catch (error: any) {
       console.error('AI Helper Error:', error);
       const errorMessage: Message = {
         id: (Date.now() + 1).toString(),
@@ -102,168 +122,14 @@ export function AIStudyHelper({ className = '', isOpen = false, onClose }: AIStu
         timestamp: new Date(),
       };
       setMessages(prev => [...prev, errorMessage]);
-      toast.error('Failed to get AI response');
+      toast.error(error.message || 'Failed to get AI response');
     } finally {
       setIsLoading(false);
       setIsTyping(false);
     }
   };
 
-  // Simulate AI response (replace with actual Perplexity API call)
-  const simulateAIResponse = async (query: string): Promise<{ content: string; sources: string[] }> => {
-    // Simulate API delay
-    await new Promise(resolve => setTimeout(resolve, 1500 + Math.random() * 1000));
 
-    // Generate contextual responses based on query keywords
-    let content = '';
-    let sources: string[] = [];
-
-    if (query.toLowerCase().includes('quantum')) {
-      content = `# Quantum Physics for Beginners
-
-**Quantum physics** is the study of matter and energy at the smallest scales, where particles behave very differently from our everyday experience.
-
-## Key Concepts:
-
-### 1. **Wave-Particle Duality**
-- Particles like electrons and photons exhibit both wave and particle properties
-- This depends on how we observe them
-
-### 2. **Uncertainty Principle**
-- We cannot know both the exact position and momentum of a particle simultaneously
-- Formulated by Werner Heisenberg
-
-### 3. **Superposition**
-- Particles can exist in multiple states simultaneously until observed
-- Famous example: Schrödinger's cat thought experiment
-
-### 4. **Quantum Entanglement**
-- Particles can be connected across vast distances
-- Measuring one instantly affects the other
-
-## Study Tips:
-- Start with basic concepts before diving into mathematical formulations
-- Use visual analogies and thought experiments
-- Practice with simple quantum mechanics problems`;
-
-      sources = [
-        "Introduction to Quantum Mechanics - MIT OpenCourseWare",
-        "Quantum Physics for Dummies - Steven Holzner",
-        "The Feynman Lectures on Physics - Volume III"
-      ];
-
-    } else if (query.toLowerCase().includes('comptia') || query.toLowerCase().includes('a+')) {
-      content = `# CompTIA A+ Study Plan
-
-## Overview
-The **CompTIA A+** certification validates foundational IT skills and is an excellent entry point for IT careers.
-
-## Study Timeline (8-12 weeks)
-
-### Weeks 1-3: Hardware Fundamentals
-- **Core 1 (220-1101)**: Hardware, mobile devices, networking
-- Focus areas: CPU, RAM, storage devices, motherboards
-- **Practice**: Hands-on hardware identification
-
-### Weeks 4-6: Operating Systems & Software
-- Windows, macOS, Linux basics
-- Installation, configuration, troubleshooting
-- **Practice**: Virtual machines for OS practice
-
-### Weeks 7-9: Security & Networking
-- **Core 2 (220-1102)**: Security, software troubleshooting
-- Network protocols, wireless security
-- **Practice**: Network configuration labs
-
-### Weeks 10-12: Final Review & Practice Exams
-- Take multiple practice exams
-- Review weak areas
-- **Target**: 85%+ on practice exams before real exam
-
-## Recommended Resources:
-- Professor Messer's free videos
-- Official CompTIA study guides
-- Practice exams from MeasureUp or Boson`;
-
-      sources = [
-        "CompTIA A+ Official Study Guide",
-        "Professor Messer's CompTIA A+ Training",
-        "CompTIA Official Website - A+ Certification"
-      ];
-
-    } else if (query.toLowerCase().includes('react') && query.toLowerCase().includes('angular')) {
-      content = `# React vs Angular: Key Differences
-
-## **React** (Library)
-### Pros:
-- **Flexibility**: More freedom in architecture choices
-- **Learning Curve**: Easier to get started
-- **Performance**: Virtual DOM for efficient updates
-- **Ecosystem**: Vast community and third-party libraries
-
-### Cons:
-- Requires additional libraries for full functionality
-- Less opinionated structure
-
-## **Angular** (Framework)
-### Pros:
-- **Complete Framework**: Built-in routing, HTTP client, forms
-- **TypeScript**: First-class TypeScript support
-- **Structure**: Opinionated, consistent project structure
-- **Enterprise**: Great for large-scale applications
-
-### Cons:
-- **Learning Curve**: Steeper learning curve
-- **Complexity**: Can be overkill for simple projects
-
-## **When to Choose:**
-
-### Choose React if:
-- Building flexible, component-based UIs
-- Want lighter weight solution
-- Prefer gradual adoption
-- Team prefers JavaScript flexibility
-
-### Choose Angular if:
-- Building large enterprise applications
-- Want comprehensive out-of-the-box features
-- Team prefers structured, opinionated approach
-- TypeScript is preferred`;
-
-      sources = [
-        "React Official Documentation",
-        "Angular Official Documentation",
-        "State of JS Survey - Frontend Frameworks"
-      ];
-
-    } else {
-      // Generic helpful response
-      content = `I'd be happy to help you with that topic! 
-
-To provide you with the most accurate and helpful information, could you please:
-
-1. **Be more specific** about what aspect you'd like to focus on
-2. **Share your current level** of knowledge on this topic
-3. **Let me know** if you're preparing for a specific exam or certification
-
-I can help with:
-- 📚 **Study plans** and learning schedules
-- 🧠 **Concept explanations** in simple terms  
-- 📝 **Practice questions** and flashcards
-- 🎯 **Exam preparation** strategies
-- 💡 **Memory techniques** and study tips
-
-What specific area would you like to explore first?`;
-
-      sources = [
-        "Evidence-based Learning Techniques - Cognitive Science",
-        "Study Strategies for Academic Success",
-        "Educational Psychology Research"
-      ];
-    }
-
-    return { content, sources };
-  };
 
   const copyMessage = (content: string) => {
     navigator.clipboard.writeText(content);

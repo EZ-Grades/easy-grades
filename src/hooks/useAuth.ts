@@ -16,15 +16,15 @@ export function useAuth() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-useEffect(() => {
-  console.log('🔐 Initializing authentication...')
+  useEffect(() => {
+    // Supabase is now always configured with working credentials
+    console.log('🔐 Initializing authentication...')
 
-  const init = async () => {
-    try {
-      const { data: { session }, error } = await supabase.auth.getSession()
-
+    // Get initial session
+    supabase.auth.getSession().then(({ data: { session }, error }) => {
       if (error) {
-        if (!error.message.includes('Invalid login credentials') &&
+        // Only show critical auth errors, not session-related ones
+        if (!error.message.includes('Invalid login credentials') && 
             !error.message.includes('session')) {
           console.error('Error getting session:', error)
           setError(error.message)
@@ -32,52 +32,32 @@ useEffect(() => {
           console.debug('Auth session check:', error.message)
         }
       }
-
       setSession(session)
-
       if (session?.user) {
-        await fetchUserProfile(session.user)
+        fetchUserProfile(session.user)
       } else {
-        setUser(null)
-      }
-    } catch (err) {
-      console.error('Unexpected error during session fetch:', err)
-      setError(err instanceof Error ? err.message : 'Unknown error occurred')
-      setUser(null)
-    } finally {
-      // 🚨 this ensures we don’t get stuck forever
-      setLoading(false)
-    }
-  }
-
-  init()
-
-  // Listen for auth changes
-  const { data: { subscription } } = supabase.auth.onAuthStateChange(
-    async (_event, session) => {
-      console.log('Auth state changed:', _event, session)
-      setSession(session)
-      setError(null)
-
-      if (session?.user) {
-        await fetchUserProfile(session.user)
-      } else {
-        setUser(null)
         setLoading(false)
       }
-    }
-  )
+    })
 
-  return () => subscription.unsubscribe()
-}, [])
+    // Listen for auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        console.log('Auth state changed:', event, session)
+        setSession(session)
+        setError(null)
+        
+        if (session?.user) {
+          await fetchUserProfile(session.user)
+        } else {
+          setUser(null)
+          setLoading(false)
+        }
+      }
+    )
 
-  useEffect(() => {
-  const timeout = setTimeout(() => {
-    setLoading(false)
-  }, 5000) // fallback after 5s
-  return () => clearTimeout(timeout)
-}, [])
-
+    return () => subscription.unsubscribe()
+  }, [])
 
   const fetchUserProfile = async (authUser: User) => {
     try {
@@ -347,6 +327,62 @@ useEffect(() => {
     }
   }
 
+  const resetPasswordForEmail = async (email: string) => {
+    if (!isSupabaseConfigured) {
+      return { success: false, error: 'Authentication not configured. Please set up your Supabase credentials.' }
+    }
+
+    try {
+      setLoading(true)
+      setError(null)
+
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/reset-password`
+      })
+
+      if (error) {
+        setError(error.message)
+        return { success: false, error: error.message }
+      }
+
+      return { success: true }
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'An unexpected error occurred'
+      setError(message)
+      return { success: false, error: message }
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const updatePassword = async (newPassword: string) => {
+    if (!isSupabaseConfigured) {
+      return { success: false, error: 'Authentication not configured. Please set up your Supabase credentials.' }
+    }
+
+    try {
+      setLoading(true)
+      setError(null)
+
+      const { error } = await supabase.auth.updateUser({
+        password: newPassword
+      })
+
+      if (error) {
+        setError(error.message)
+        return { success: false, error: error.message }
+      }
+
+      return { success: true }
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'An unexpected error occurred'
+      setError(message)
+      return { success: false, error: message }
+    } finally {
+      setLoading(false)
+    }
+  }
+
   return {
     user,
     session,
@@ -356,6 +392,8 @@ useEffect(() => {
     signIn,
     signInWithGoogle,
     signOut,
-    updateProfile
+    updateProfile,
+    resetPasswordForEmail,
+    updatePassword
   }
 }

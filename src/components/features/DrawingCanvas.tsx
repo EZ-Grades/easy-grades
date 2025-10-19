@@ -145,7 +145,7 @@ export function DrawingCanvas({ width = 400, height = 300 }: DrawingCanvasProps)
           >
             <Palette className="w-5 h-5 text-primary-solid" />
           </motion.div>
-          <span className="text-gradient-primary">Creative Canvas</span>
+          <span className="text-gradient-primary">Canvas</span>
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">

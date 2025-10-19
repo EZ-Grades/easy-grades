@@ -224,7 +224,10 @@ export function WordSearchGame({ onComplete }: WordSearchGameProps) {
       // Check if all words are found
       if (newFoundWords.length === words.length) {
         setGameCompleted(true);
-        setTimeout(() => onComplete(), 2000);
+        // Auto-restart after showing result
+        setTimeout(() => {
+          resetGame();
+        }, 3000);
       }
     }
     

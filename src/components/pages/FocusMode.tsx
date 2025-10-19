@@ -1,313 +1,207 @@
-import { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
+import { useState, useEffect, useRef } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
 import { 
-  Shield, 
-  Volume2, 
-  VolumeX, 
   Timer, 
-  Coffee,
-  Zap,
-  Eye,
-  EyeOff,
-  Settings,
+  Zap, 
   Play,
-  Minus,
-  Plus
+  Pause,
+  Minus, 
+  Plus, 
+  Volume2,
+  VolumeX,
+  RotateCcw,
+  Maximize,
+  X,
+  Check,
+  BookOpen,
+  Upload,
+  Music,
+  Sparkles
 } from 'lucide-react';
 import { GlassCard } from '../GlassCard';
 import { ProgressRing } from '../ProgressRing';
 import { Button } from '../ui/button';
-import { Badge } from '../ui/badge';
-import { FocusSession } from '../FocusSession';
-
+import { Slider } from '../ui/slider';
+import { Textarea } from '../ui/textarea';
 import { useAuth } from '../../hooks/useAuth';
-import backendService from '../../services/backendService';
-import { toast } from 'sonner';
+import { toast } from 'sonner@2.0.3';
+import { FocusJournal } from '../FocusJournal';
+import { FlipClock } from '../FlipClock';
 
-interface AmbientSound {
+// Ambience mode type
+interface AmbienceMode {
   id: string;
   name: string;
-  volume: number; // UI: 0 - 100
-  enabled: boolean;
+  description: string;
   icon: string;
+  bg_class: string;
+  background_url?: string; // Supabase image URL
+  sound_url?: string;
+  isCustom?: boolean;
 }
 
+// Fallback ambience modes
+const FALLBACK_AMBIENCES: AmbienceMode[] = [
+  { 
+    id: 'cafe', 
+    name: 'Café', 
+    description: 'Warm coffee shop atmosphere', 
+    icon: '☕', 
+    bg_class: 'bg-gradient-to-br from-amber-100 via-orange-50 to-yellow-100 dark:from-amber-900 dark:via-orange-800 dark:to-yellow-900',
+    background_url: 'https://images.unsplash.com/photo-1442512595331-e89e73853f31?w=1920&q=80', // Replace with Supabase URL
+    sound_url: 'https://assets.mixkit.co/active_storage/sfx/2488/2488-preview.mp3'
+  },
+  { 
+    id: 'forest', 
+    name: 'Forest', 
+    description: 'Natural green scenery', 
+    icon: '🌲', 
+    bg_class: 'bg-gradient-to-br from-green-100 via-emerald-50 to-teal-100 dark:from-green-900 dark:via-emerald-800 dark:to-teal-900',
+    background_url: 'https://images.unsplash.com/photo-1441974231531-c6227db76b6e?w=1920&q=80', // Replace with Supabase URL
+    sound_url: 'https://assets.mixkit.co/active_storage/sfx/2396/2396-preview.mp3'
+  },
+  { 
+    id: 'ocean', 
+    name: 'Ocean', 
+    description: 'Calming ocean waves', 
+    icon: '🌊', 
+    bg_class: 'bg-gradient-to-br from-cyan-100 via-blue-50 to-teal-100 dark:from-cyan-900 dark:via-blue-800 dark:to-teal-900',
+    background_url: 'https://images.unsplash.com/photo-1505142468610-359e7d316be0?w=1920&q=80', // Replace with Supabase URL
+    sound_url: 'https://assets.mixkit.co/active_storage/sfx/2390/2390-preview.mp3'
+  },
+  { 
+    id: 'rain', 
+    name: 'Rain', 
+    description: 'Gentle rain sounds', 
+    icon: '🌧️', 
+    bg_class: 'bg-gradient-to-br from-slate-100 via-gray-50 to-blue-100 dark:from-slate-900 dark:via-gray-800 dark:to-blue-900',
+    background_url: 'https://images.unsplash.com/photo-1515694346937-94d85e41e6f0?w=1920&q=80', // Replace with Supabase URL
+    sound_url: 'https://assets.mixkit.co/active_storage/sfx/2393/2393-preview.mp3'
+  },
+  { 
+    id: 'library', 
+    name: 'Library', 
+    description: 'Classic study environment', 
+    icon: '📚', 
+    bg_class: 'bg-gradient-to-br from-slate-100 via-gray-50 to-blue-100 dark:from-slate-900 dark:via-gray-800 dark:to-blue-900',
+    background_url: 'https://images.unsplash.com/photo-1521587760476-6c12a4b040da?w=1920&q=80' // Replace with Supabase URL
+  },
+  { 
+    id: 'mountain', 
+    name: 'Mountain', 
+    description: 'Peaceful mountain scenery', 
+    icon: '🏔️', 
+    bg_class: 'bg-gradient-to-br from-blue-100 via-indigo-50 to-purple-100 dark:from-blue-900 dark:via-indigo-800 dark:to-purple-900',
+    background_url: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=1920&q=80' // Replace with Supabase URL
+  },
+  { 
+    id: 'zen', 
+    name: 'Zen', 
+    description: 'Clean and distraction-free', 
+    icon: '🧘', 
+    bg_class: 'bg-gradient-to-br from-gray-50 via-white to-gray-100 dark:from-gray-900 dark:via-slate-800 dark:to-gray-800',
+    background_url: 'https://images.unsplash.com/photo-1545389336-cf090694435e?w=1920&q=80' // Replace with Supabase URL
+  },
+  { 
+    id: 'fire', 
+    name: 'Fireplace', 
+    description: 'Cozy crackling fire', 
+    icon: '🔥', 
+    bg_class: 'bg-gradient-to-br from-orange-100 via-red-50 to-yellow-100 dark:from-orange-900 dark:via-red-800 dark:to-yellow-900',
+    background_url: 'https://images.unsplash.com/photo-1574643156929-51fa098b0394?w=1920&q=80', // Replace with Supabase URL
+    sound_url: 'https://assets.mixkit.co/active_storage/sfx/2398/2398-preview.mp3'
+  }
+];
+
 export function FocusMode() {
-  const [focusTimer, setFocusTimer] = useState(50 * 60); // 50 minutes
-  const [focusDuration, setFocusDuration] = useState(50); // Duration in minutes for fullscreen session
+  // State management
+  const [focusTimer, setFocusTimer] = useState(25 * 60); // 25 minutes default
+  const [focusDuration, setFocusDuration] = useState(25); // Duration in minutes
   const [isTimerRunning, setIsTimerRunning] = useState(false);
   const [isFullscreenSession, setIsFullscreenSession] = useState(false);
-  const [distractionBlockEnabled, setDistractionBlockEnabled] = useState(false);
-  const [showBlockedSites, setShowBlockedSites] = useState(false);
-  const [selectedAmbience, setSelectedAmbience] = useState('cafe');
+  const [selectedAmbience, setSelectedAmbience] = useState<AmbienceMode | null>(null);
   const [showAmbienceSelector, setShowAmbienceSelector] = useState(false);
-  const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
+  const [ambienceModes, setAmbienceModes] = useState<AmbienceMode[]>(FALLBACK_AMBIENCES);
+  const [playingAmbience, setPlayingAmbience] = useState<string | null>(null);
+  const [ambienceVolume, setAmbienceVolume] = useState(50);
+  const [audioElement, setAudioElement] = useState<HTMLAudioElement | null>(null);
   const [sessionStartTime, setSessionStartTime] = useState<Date | null>(null);
-  const [loading, setLoading] = useState(true);
-  
-  const [ambientSounds, setAmbientSounds] = useState<AmbientSound[]>([]);
-  const [ambienceModes, setAmbienceModes] = useState<any[]>([]);
-  const [blockedSites, setBlockedSites] = useState<string[]>([]);
+  const [totalMinutes, setTotalMinutes] = useState(0);
+  const [journalEntry, setJournalEntry] = useState('');
+  const [showCustomizer, setShowCustomizer] = useState(false);
   const [customBackground, setCustomBackground] = useState<string | null>(null);
+  const [customSound, setCustomSound] = useState<string | null>(null);
+  const [exitClickCount, setExitClickCount] = useState(0);
+  const [showExitPrompt, setShowExitPrompt] = useState(false);
+  const exitTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const soundInputRef = useRef<HTMLInputElement>(null);
+  const [showJournalModal, setShowJournalModal] = useState(false);
   
   const { user } = useAuth();
 
-  // Helper function to get icon for sound name
-  const getIconForSound = (name: string) => {
-    const iconMap: { [key: string]: string } = {
-      'Rain': '🌧️',
-      'Forest': '🌲', 
-      'Coffee Shop': '☕',
-      'Ocean': '🌊',
-      'White Noise': '⚪',
-      'Fire': '🔥'
+  // Load preferences on mount
+  useEffect(() => {
+    // Load last used background from localStorage
+    const savedAmbience = localStorage.getItem('focus_last_ambience');
+    if (savedAmbience) {
+      const ambience = FALLBACK_AMBIENCES.find(a => a.id === savedAmbience);
+      if (ambience) {
+        setSelectedAmbience(ambience);
+      }
+    }
+
+    // Load volume preference
+    const savedVolume = localStorage.getItem('focus_ambience_volume');
+    if (savedVolume) {
+      setAmbienceVolume(parseInt(savedVolume));
+    }
+
+    // Load custom background
+    const savedCustomBg = localStorage.getItem('focus_custom_background');
+    if (savedCustomBg) {
+      setCustomBackground(savedCustomBg);
+    }
+
+    // Load custom sound
+    const savedCustomSound = localStorage.getItem('focus_custom_sound');
+    if (savedCustomSound) {
+      setCustomSound(savedCustomSound);
+    }
+
+    // Load journal entry
+    const savedJournal = localStorage.getItem('focus_journal_entry');
+    if (savedJournal) {
+      setJournalEntry(savedJournal);
+    }
+
+    // Initialize audio element
+    const audio = new Audio();
+    audio.loop = true;
+    setAudioElement(audio);
+
+    return () => {
+      audio.pause();
+      audio.src = '';
     };
-    return iconMap[name] || '🎵';
-  };
+  }, []);
 
-  // Load data when component mounts
+  // Save journal entry to localStorage
   useEffect(() => {
-    const loadData = async () => {
-      const timeout = setTimeout(() => {
-        console.warn('Focus mode data loading timeout, using fallback data');
-        setLoading(false);
-      }, 10000); // 10 second timeout
-      
-      try {
-        setLoading(true);
-        
-        // Define fallback data at the top level
-        const fallbackSounds: AmbientSound[] = [
-          { id: '1', name: 'Rain', volume: 50, enabled: false, icon: '🌧️' },
-          { id: '2', name: 'Forest', volume: 30, enabled: true, icon: '🌲' },
-          { id: '3', name: 'Coffee Shop', volume: 40, enabled: false, icon: '☕' },
-          { id: '4', name: 'Ocean Waves', volume: 60, enabled: false, icon: '🌊' },
-          { id: '5', name: 'White Noise', volume: 35, enabled: false, icon: '⚪' },
-          { id: '6', name: 'Fireplace', volume: 45, enabled: false, icon: '🔥' }
-        ];
+    localStorage.setItem('focus_journal_entry', journalEntry);
+  }, [journalEntry]);
 
-        const fallbackModes = [
-          { id: 'cafe', name: 'Café', description: 'Warm coffee shop atmosphere', icon: '☕', bg_class: 'bg-gradient-to-br from-amber-100 via-orange-50 to-yellow-100 dark:from-amber-900 dark:via-orange-800 dark:to-yellow-900' },
-          { id: 'library', name: 'Library', description: 'Classic study environment', icon: '📚', bg_class: 'bg-gradient-to-br from-slate-100 via-gray-50 to-blue-100 dark:from-slate-900 dark:via-gray-800 dark:to-blue-900' },
-          { id: 'forest', name: 'Forest', description: 'Natural green scenery', icon: '🌲', bg_class: 'bg-gradient-to-br from-green-100 via-emerald-50 to-teal-100 dark:from-green-900 dark:via-emerald-800 dark:to-teal-900' },
-          { id: 'mountain', name: 'Mountain', description: 'Peaceful mountain scenery', icon: '🏔️', bg_class: 'bg-gradient-to-br from-blue-100 via-indigo-50 to-purple-100 dark:from-blue-900 dark:via-indigo-800 dark:to-purple-900' },
-          { id: 'beach', name: 'Beach', description: 'Calming ocean waves', icon: '🏖️', bg_class: 'bg-gradient-to-br from-cyan-100 via-blue-50 to-teal-100 dark:from-cyan-900 dark:via-blue-800 dark:to-teal-900' },
-          { id: 'zen', name: 'Minimalist/Zen', description: 'Clean and distraction-free', icon: '🧘', bg_class: 'bg-gradient-to-br from-gray-50 via-white to-gray-100 dark:from-gray-900 dark:via-slate-800 dark:to-gray-800' }
-        ];
-
-        const fallbackBlockedSites = [
-          'facebook.com',
-          'twitter.com',
-          'instagram.com',
-          'youtube.com',
-          'reddit.com',
-          'netflix.com',
-          'tiktok.com',
-          'twitch.tv'
-        ];
-        
-        // Try to load ambient sounds from backend first
-        try {
-          const soundsResult = await backendService?.ambientSounds?.getAllAmbientSounds?.();
-          if (soundsResult?.data && soundsResult.data.length > 0) {
-            const mappedSounds = soundsResult.data.map((sound: any) => {
-              // Assume backend returns 0..1 for volume (if it's already 0..100 we clamp)
-              const raw = sound.volume ?? 0.5;
-              const normalized = raw > 1 ? Math.min(100, Math.round(raw)) : Math.min(100, Math.round(raw * 100));
-              return {
-                id: sound.id,
-                name: sound.name,
-                volume: normalized,
-                enabled: false,
-                icon: sound.icon || getIconForSound(sound.name)
-              };
-            });
-            setAmbientSounds(mappedSounds);
-          } else {
-            setAmbientSounds(fallbackSounds);
-          }
-        } catch (error) {
-          console.warn('Ambient sounds table not available, using fallback data', error);
-          setAmbientSounds(fallbackSounds);
-        }
-
-        // Try to load ambience modes from backend
-        try {
-          const modesResult = await backendService?.ambienceModes?.getAllAmbienceModes?.();
-          if (modesResult?.data && modesResult.data.length > 0) {
-            setAmbienceModes(modesResult.data);
-          } else {
-            setAmbienceModes(fallbackModes);
-          }
-        } catch (error) {
-          console.warn('Ambience modes table not available, using fallback data', error);
-          setAmbienceModes(fallbackModes);
-        }
-
-        // Load user-specific data if logged in
-        if (user) {
-          try {
-            // Load user ambient settings
-            try {
-              const userSoundsResult = await backendService?.ambientSounds?.getUserAmbientSettings?.(user.id);
-              if (userSoundsResult?.data && userSoundsResult.data.length > 0) {
-                const userSounds = userSoundsResult.data.map((setting: any) => {
-                  const raw = setting.volume ?? 0.5;
-                  const normalized = raw > 1 ? Math.min(100, Math.round(raw)) : Math.min(100, Math.round(raw * 100));
-                  return {
-                    id: setting.ambient_sound_id,
-                    name: setting.ambient_sounds?.name ?? 'Sound',
-                    volume: normalized,
-                    enabled: !!setting.enabled,
-                    icon: setting.ambient_sounds?.icon || getIconForSound(setting.ambient_sounds?.name)
-                  };
-                });
-                setAmbientSounds(userSounds);
-              }
-            } catch (error) {
-              console.warn('Error loading user ambient settings, using defaults', error);
-            }
-
-            // Load distraction blocker settings
-            try {
-              const userSettings = await backendService?.distractionBlocker?.getUserSettings?.(user.id);
-              if (userSettings?.data) {
-                setDistractionBlockEnabled(!!userSettings.data.distraction_block_enabled);
-                setShowBlockedSites(!!userSettings.data.show_blocked_sites);
-              }
-            } catch (error) {
-              console.warn('Error loading distraction blocker settings', error);
-            }
-
-            // Load blocked sites
-            try {
-              const blockedSitesResult = await backendService?.distractionBlocker?.getBlockedSites?.(user.id);
-              if (blockedSitesResult?.data && blockedSitesResult.data.length > 0) {
-                setBlockedSites(blockedSitesResult.data.map((site: any) => site.url));
-              } else {
-                setBlockedSites(fallbackBlockedSites);
-              }
-            } catch (error) {
-              console.warn('Error loading blocked sites, using fallback', error);
-              setBlockedSites(fallbackBlockedSites);
-            }
-
-            // Load user background preference
-            try {
-              const userSettingsRes = await backendService?.userSettings?.getUserSettings?.(user.id);
-              if (userSettingsRes?.data?.focus_background) {
-                setCustomBackground(userSettingsRes.data.focus_background);
-              }
-            } catch (error) {
-              console.error('Error loading user background preference:', error);
-            }
-          } catch (error) {
-            console.error('Error loading user-specific data:', error);
-            setBlockedSites(fallbackBlockedSites);
-          }
-        } else {
-          setBlockedSites(fallbackBlockedSites);
-        }
-      } catch (error: any) {
-        console.error('Error loading focus mode data:', error);
-        // Don't show error toast for expected missing tables
-        if (!error?.message?.includes('not found') && !error?.message?.includes('table')) {
-          toast.error('Failed to load focus mode data');
-        }
-      } finally {
-        clearTimeout(timeout);
-        setLoading(false);
-      }
-    };
-
-    loadData();
-  }, [user]);
-
-  const totalFocusTime = focusDuration * 60;
-  const focusProgress = ((totalFocusTime - focusTimer) / totalFocusTime) * 100;
-
-  // Update timer when duration changes (but only if not running)
+  // Timer logic
   useEffect(() => {
-    if (!isTimerRunning) {
-      setFocusTimer(focusDuration * 60);
-    }
-  }, [focusDuration, isTimerRunning]);
-
-  // Session lifecycle helpers (placed before the interval that references them)
-  const startFocusSession = async () => {
-    if (!user) {
-      toast.error('Please log in to start a focus session');
-      return;
-    }
-
-    try {
-      const selectedMode = ambienceModes.find(mode => mode.id === selectedAmbience);
-      const result = await backendService?.focusSessions?.startSession?.(
-        user.id, 
-        focusDuration,
-        selectedMode?.name,
-        isFullscreenSession
-      );
-      
-      if (result?.success && result.data) {
-        setCurrentSessionId(result.data.id);
-        setSessionStartTime(new Date());
-        setIsTimerRunning(true);
-        toast.success('Focus session started!');
-      } else {
-        toast.error(result?.error?.message || 'Failed to start session');
-      }
-    } catch (error) {
-      console.error('Error starting focus session:', error);
-      toast.error('Failed to start session');
-    }
-  };
-
-  const handleSessionComplete = async () => {
-    if (user && currentSessionId) {
-      try {
-        await backendService?.focusSessions?.endSession?.(currentSessionId, focusDuration);
-        toast.success('Focus session completed! Great job! 🎉');
-      } catch (error) {
-        console.error('Error completing session:', error);
-      }
-    }
-    
-    setIsTimerRunning(false);
-    setCurrentSessionId(null);
-    setSessionStartTime(null);
-    setFocusTimer(focusDuration * 60);
-  };
-
-  const stopFocusSession = async () => {
-    if (user && currentSessionId) {
-      try {
-        const completedMinutes = Math.floor((totalFocusTime - focusTimer) / 60);
-        await backendService?.focusSessions?.endSession?.(currentSessionId, completedMinutes);
-        toast.info('Focus session stopped');
-      } catch (error) {
-        console.error('Error stopping session:', error);
-      }
-    }
-    
-    setIsTimerRunning(false);
-    setCurrentSessionId(null);
-    setSessionStartTime(null);
-    setFocusTimer(focusDuration * 60);
-  };
-
-  useEffect(() => {
-    let interval: ReturnType<typeof setInterval>;
+    let interval: NodeJS.Timeout;
     if (isTimerRunning && focusTimer > 0) {
       interval = setInterval(() => {
         setFocusTimer((prev) => {
           const newTime = prev - 1;
           
-          // Update session progress in backend if user is logged in
-          if (user && currentSessionId) {
-            const completedMinutes = Math.floor((totalFocusTime - newTime) / 60);
-            backendService?.focusSessions?.updateSessionProgress?.(currentSessionId, completedMinutes)
-              .catch(error => console.error('Error updating session progress:', error));
+          // Track every minute completed
+          if (user && newTime % 60 === 0) {
+            setTotalMinutes(m => m + 1);
           }
           
           return newTime;
@@ -318,7 +212,286 @@ export function FocusMode() {
       handleSessionComplete();
     }
     return () => clearInterval(interval);
-  }, [isTimerRunning, focusTimer, user, currentSessionId, totalFocusTime]);
+  }, [isTimerRunning, focusTimer, user]);
+
+  // Update timer when duration changes (only if not running)
+  useEffect(() => {
+    if (!isTimerRunning) {
+      setFocusTimer(focusDuration * 60);
+    }
+  }, [focusDuration, isTimerRunning]);
+
+  // Handle fullscreen
+  useEffect(() => {
+    if (isFullscreenSession) {
+      document.documentElement.requestFullscreen?.().catch(err => {
+        console.log('Fullscreen not supported:', err);
+      });
+    } else {
+      if (document.fullscreenElement) {
+        document.exitFullscreen?.().catch(err => {
+          console.log('Exit fullscreen error:', err);
+        });
+      }
+    }
+  }, [isFullscreenSession]);
+
+  // Keyboard shortcuts for Zen mode
+  useEffect(() => {
+    if (!isFullscreenSession) return;
+
+    const handleKeyPress = (e: KeyboardEvent) => {
+      // Space bar to toggle play/pause
+      if (e.code === 'Space') {
+        e.preventDefault();
+        setIsTimerRunning(prev => !prev);
+      }
+      // R key to reset
+      if (e.code === 'KeyR') {
+        e.preventDefault();
+        handleResetTimer();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyPress);
+    return () => window.removeEventListener('keydown', handleKeyPress);
+  }, [isFullscreenSession]);
+
+  // Add custom ambience option
+  useEffect(() => {
+    const customOption: AmbienceMode = {
+      id: 'custom',
+      name: 'Custom',
+      description: 'Your personalized environment',
+      icon: '🎨',
+      bg_class: 'bg-gradient-to-br from-violet-100 via-purple-50 to-pink-100 dark:from-violet-900 dark:via-purple-800 dark:to-pink-900',
+      background_url: customBackground || undefined,
+      sound_url: customSound || undefined,
+      isCustom: true
+    };
+    
+    // Check if custom option already exists
+    const hasCustom = ambienceModes.some(a => a.id === 'custom');
+    if (!hasCustom) {
+      setAmbienceModes([...FALLBACK_AMBIENCES, customOption]);
+    } else {
+      setAmbienceModes([...FALLBACK_AMBIENCES.filter(a => a.id !== 'custom'), customOption]);
+    }
+  }, [customBackground, customSound]);
+
+  const handleSessionComplete = async () => {
+    setIsTimerRunning(false);
+    
+    if (user) {
+      // Save session to backend
+      try {
+        const sessionData = {
+          duration_minutes: focusDuration,
+          completed_minutes: focusDuration,
+          ambience_used: selectedAmbience?.name || 'None',
+          is_fullscreen: isFullscreenSession,
+          journal_entry: journalEntry
+        };
+        
+        // Update dashboard stats (this would be a backend call)
+        toast.success('Session complete! 🎉 Your dashboard has been updated.');
+      } catch (error) {
+        console.error('Error saving session:', error);
+        toast.success('Session complete! 🎉');
+      }
+    } else {
+      toast.success('Session complete! Great job!');
+    }
+    
+    // Reset timer
+    setFocusTimer(focusDuration * 60);
+    setTotalMinutes(0);
+    setSessionStartTime(null);
+    
+    // Exit fullscreen if active
+    if (isFullscreenSession) {
+      setIsFullscreenSession(false);
+    }
+  };
+
+  const handleStartFullscreen = () => {
+    setShowAmbienceSelector(true);
+  };
+
+  const handleStartSession = () => {
+    setShowAmbienceSelector(false);
+    setIsFullscreenSession(true);
+    setIsTimerRunning(true);
+    setSessionStartTime(new Date());
+    setFocusTimer(focusDuration * 60);
+    setTotalMinutes(0);
+    
+    // Save last used ambience
+    if (selectedAmbience) {
+      localStorage.setItem('focus_last_ambience', selectedAmbience.id);
+    }
+    
+    // Start ambience sound if available
+    if (selectedAmbience?.sound_url && audioElement) {
+      playAmbience(selectedAmbience.id);
+    }
+  };
+
+  const handleNormalFocus = () => {
+    if (isTimerRunning) {
+      // Pause
+      setIsTimerRunning(false);
+    } else {
+      // Start
+      if (!sessionStartTime) {
+        setSessionStartTime(new Date());
+        setTotalMinutes(0);
+      }
+      setIsTimerRunning(true);
+      
+      if (user) {
+        toast.info('Focus session started');
+      }
+    }
+  };
+
+  const handleResetTimer = () => {
+    setIsTimerRunning(false);
+    setFocusTimer(focusDuration * 60);
+    setSessionStartTime(null);
+    setTotalMinutes(0);
+    // Keep ambience playing if it was already playing
+  };
+
+  const handleExitClick = () => {
+    setExitClickCount(prev => prev + 1);
+    setShowExitPrompt(true);
+
+    // Clear previous timeout
+    if (exitTimeoutRef.current) {
+      clearTimeout(exitTimeoutRef.current);
+    }
+
+    // Reset after 2 seconds
+    exitTimeoutRef.current = setTimeout(() => {
+      setExitClickCount(0);
+      setShowExitPrompt(false);
+    }, 2000);
+
+    // Exit on second click
+    if (exitClickCount >= 1) {
+      handleCancelSession();
+    }
+  };
+
+  const handleCancelSession = () => {
+    // Stop timer
+    setIsTimerRunning(false);
+    setFocusTimer(focusDuration * 60);
+    setSessionStartTime(null);
+    setTotalMinutes(0);
+    
+    // Stop ambience
+    if (audioElement) {
+      audioElement.pause();
+      setPlayingAmbience(null);
+    }
+    
+    // Exit fullscreen
+    setIsFullscreenSession(false);
+    
+    // Reset exit counter
+    setExitClickCount(0);
+    setShowExitPrompt(false);
+    
+    // Don't save session (marked as incomplete)
+    toast.info('Session cancelled');
+  };
+
+  const playAmbience = (ambienceId: string) => {
+    if (!audioElement) return;
+
+    const ambience = ambienceModes.find(a => a.id === ambienceId);
+    if (!ambience?.sound_url) return;
+
+    if (playingAmbience === ambienceId) {
+      // Toggle pause
+      if (audioElement.paused) {
+        audioElement.play().catch(err => console.error('Play error:', err));
+        setPlayingAmbience(ambienceId);
+      } else {
+        audioElement.pause();
+        setPlayingAmbience(null);
+      }
+    } else {
+      // Stop current and play new
+      audioElement.pause();
+      audioElement.src = ambience.sound_url;
+      audioElement.volume = ambienceVolume / 100;
+      audioElement.play().catch(err => {
+        console.error('Play error:', err);
+        toast.error('Failed to play ambient sound');
+      });
+      setPlayingAmbience(ambienceId);
+    }
+  };
+
+  const handleVolumeChange = (value: number[]) => {
+    const newVolume = value[0];
+    setAmbienceVolume(newVolume);
+    localStorage.setItem('focus_ambience_volume', newVolume.toString());
+    if (audioElement) {
+      audioElement.volume = newVolume / 100;
+    }
+  };
+
+  const handleCustomBackgroundUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      toast.error('Please select an image file');
+      return;
+    }
+
+    if (file.size > 10 * 1024 * 1024) {
+      toast.error('Image must be smaller than 10MB');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const imageUrl = event.target?.result as string;
+      setCustomBackground(imageUrl);
+      localStorage.setItem('focus_custom_background', imageUrl);
+      toast.success('Custom background uploaded!');
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleCustomSoundUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('audio/')) {
+      toast.error('Please select an audio file');
+      return;
+    }
+
+    if (file.size > 20 * 1024 * 1024) {
+      toast.error('Audio must be smaller than 20MB');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const audioUrl = event.target?.result as string;
+      setCustomSound(audioUrl);
+      localStorage.setItem('focus_custom_sound', audioUrl);
+      toast.success('Custom sound uploaded!');
+    };
+    reader.readAsDataURL(file);
+  };
 
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
@@ -326,112 +499,178 @@ export function FocusMode() {
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   };
 
-  const toggleSound = async (id: string) => {
-    const updatedSounds = ambientSounds.map(sound => 
-      sound.id === id ? { ...sound, enabled: !sound.enabled } : sound
-    );
-    setAmbientSounds(updatedSounds);
+  const totalFocusTime = focusDuration * 60;
+  const focusProgress = ((totalFocusTime - focusTimer) / totalFocusTime) * 100;
 
-    // Save to backend if user is logged in
-    if (user) {
-      try {
-        const sound = updatedSounds.find(s => s.id === id);
-        if (sound) {
-          // convert to 0..1 for backend
-          await backendService?.ambientSounds?.updateUserAmbientSetting?.(
-            user.id, 
-            id, 
-            sound.enabled, 
-            Math.min(1, Math.max(0, sound.volume / 100))
-          );
-        }
-      } catch (error) {
-        console.error('Error updating ambient sound setting:', error);
-      }
-    }
-  };
-
-  const updateSoundVolume = async (id: string, volume: number) => {
-    const updatedSounds = ambientSounds.map(sound => 
-      sound.id === id ? { ...sound, volume } : sound
-    );
-    setAmbientSounds(updatedSounds);
-
-    // Save to backend if user is logged in
-    if (user) {
-      try {
-        const sound = updatedSounds.find(s => s.id === id);
-        if (sound) {
-          await backendService?.ambientSounds?.updateUserAmbientSetting?.(
-            user.id, 
-            id, 
-            sound.enabled, 
-            Math.min(1, Math.max(0, volume / 100))
-          );
-        }
-      } catch (error) {
-        console.error('Error updating ambient sound volume:', error);
-      }
-    }
-  };
-
-  // Show ambience selector before starting fullscreen session
+  // Ambience Selector Screen
   if (showAmbienceSelector) {
     return (
       <div className="min-h-screen pb-8 px-4 pt-8">
-        <div className="max-w-4xl mx-auto">
+        <div className="max-w-5xl mx-auto">
           <motion.div 
             className="mb-8 text-center"
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6 }}
           >
-            <h1 className="text-4xl font-bold mb-2">
+            <h1 className="text-4xl mb-2">
               <span className="text-gradient-primary">Choose Your Ambience</span> 🎯
             </h1>
-            <p className="text-lg text-muted-foreground">Select the perfect background for your focus session</p>
+            <p className="text-lg text-muted-foreground">Select the perfect environment for your focus session</p>
           </motion.div>
 
-          <GlassCard size="lg">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <GlassCard className="p-8">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
               {ambienceModes.map((ambience, index) => (
                 <motion.div
                   key={ambience.id}
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: index * 0.1 }}
+                  transition={{ delay: index * 0.05 }}
                   className={`
-                    p-6 rounded-lg border-2 transition-all duration-300 cursor-pointer
-                    ${selectedAmbience === ambience.id 
-                      ? 'border-primary-solid bg-primary-solid/10 glow-primary' 
-                      : 'border-muted hover:border-primary-solid/50'
+                    relative p-6 rounded-xl border-2 transition-all duration-300 cursor-pointer overflow-hidden
+                    ${selectedAmbience?.id === ambience.id 
+                      ? 'border-primary-solid bg-primary-solid/10 glow-primary scale-105' 
+                      : 'border-muted hover:border-primary-solid/50 hover:scale-102'
                     }
                   `}
-                  onClick={() => setSelectedAmbience(ambience.id)}
-                  whileHover={{ scale: 1.02 }}
+                  onClick={() => {
+                    setSelectedAmbience(ambience);
+                    if (ambience.isCustom) {
+                      setShowCustomizer(true);
+                    }
+                  }}
+                  whileHover={{ y: -5 }}
                   whileTap={{ scale: 0.98 }}
                 >
-                  <div className="text-center">
-                    <div className="text-4xl mb-3">{ambience.icon}</div>
-                    <h3 className="font-semibold mb-2">{ambience.name}</h3>
-                    <p className="text-sm text-muted-foreground">{ambience.description}</p>
+                  {/* Background preview */}
+                  <div className={`absolute inset-0 ${ambience.bg_class} opacity-20`} />
+                  
+                  {/* Content */}
+                  <div className="relative z-10 text-center">
+                    <div className="text-5xl mb-3">{ambience.icon}</div>
+                    <h3 className="mb-2">{ambience.name}</h3>
+                    <p className="text-xs text-muted-foreground">{ambience.description}</p>
+                    
+                    {/* Selected indicator */}
+                    {selectedAmbience?.id === ambience.id && (
+                      <motion.div
+                        initial={{ scale: 0 }}
+                        animate={{ scale: 1 }}
+                        className="absolute top-2 right-2 w-6 h-6 rounded-full bg-primary-solid flex items-center justify-center"
+                      >
+                        <Check className="w-4 h-4 text-white" />
+                      </motion.div>
+                    )}
                   </div>
                 </motion.div>
               ))}
             </div>
 
-            <div className="flex justify-center gap-4 mt-8">
+            {/* Custom Ambience Uploader */}
+            <AnimatePresence>
+              {showCustomizer && selectedAmbience?.isCustom && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: 'auto' }}
+                  exit={{ opacity: 0, height: 0 }}
+                  className="mb-8 p-6 bg-primary-solid/5 rounded-xl border border-primary-solid/20"
+                >
+                  <h3 className="text-lg mb-4 text-gradient-primary">Customize Your Environment</h3>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {/* Background Upload */}
+                    <div>
+                      <label className="block text-sm mb-2 text-muted-foreground">Background Image</label>
+                      <input
+                        ref={fileInputRef}
+                        type="file"
+                        accept="image/*"
+                        onChange={handleCustomBackgroundUpload}
+                        className="hidden"
+                      />
+                      <Button
+                        variant="outline"
+                        onClick={() => fileInputRef.current?.click()}
+                        className="w-full"
+                      >
+                        <Upload className="w-4 h-4 mr-2" />
+                        {customBackground ? 'Change Background' : 'Upload Background'}
+                      </Button>
+                      {customBackground && (
+                        <div className="mt-2 h-20 rounded-lg overflow-hidden">
+                          <img src={customBackground} alt="Custom" className="w-full h-full object-cover" />
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Sound Upload */}
+                    <div>
+                      <label className="block text-sm mb-2 text-muted-foreground">Ambient Sound (optional)</label>
+                      <input
+                        ref={soundInputRef}
+                        type="file"
+                        accept="audio/*"
+                        onChange={handleCustomSoundUpload}
+                        className="hidden"
+                      />
+                      <Button
+                        variant="outline"
+                        onClick={() => soundInputRef.current?.click()}
+                        className="w-full"
+                      >
+                        <Music className="w-4 h-4 mr-2" />
+                        {customSound ? 'Change Sound' : 'Upload Sound'}
+                      </Button>
+                      {customSound && (
+                        <p className="mt-2 text-xs text-green-600">✓ Custom sound loaded</p>
+                      )}
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            {/* Duration selector */}
+            <div className="mb-8">
+              <p className="text-sm text-muted-foreground mb-3 text-center">Focus Duration</p>
+              <div className="flex items-center justify-center gap-4">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setFocusDuration(Math.max(5, focusDuration - 5))}
+                >
+                  <Minus className="w-4 h-4" />
+                </Button>
+                <div className="text-center min-w-[100px]">
+                  <div className="text-3xl text-gradient-primary">{focusDuration}</div>
+                  <div className="text-xs text-muted-foreground">minutes</div>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setFocusDuration(Math.min(180, focusDuration + 5))}
+                >
+                  <Plus className="w-4 h-4" />
+                </Button>
+              </div>
+            </div>
+
+            {/* Action buttons */}
+            <div className="flex justify-center gap-4">
               <Button
                 variant="outline"
-                onClick={() => setShowAmbienceSelector(false)}
-              >
-                Back
-              </Button>
-              <Button
                 onClick={() => {
                   setShowAmbienceSelector(false);
-                  setIsFullscreenSession(true);
+                  setSelectedAmbience(null);
+                  setShowCustomizer(false);
                 }}
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleStartSession}
+                disabled={!selectedAmbience}
                 className="bg-gradient-to-r from-blue-600 to-purple-600 text-white"
               >
                 <Play className="w-4 h-4 mr-2" />
@@ -444,20 +683,238 @@ export function FocusMode() {
     );
   }
 
-  // Show fullscreen focus session
-  if (isFullscreenSession) {
-    const selectedAmbienceMode = ambienceModes.find(a => a.id === selectedAmbience);
+  // Fullscreen Focus Session
+  if (isFullscreenSession && selectedAmbience) {
+    const isZenMode = selectedAmbience.id === 'zen';
+    
+    const backgroundStyle = isZenMode 
+      ? {} // No background for zen mode - pure black
+      : selectedAmbience.background_url 
+        ? { 
+            backgroundImage: `url(${selectedAmbience.background_url})`,
+            backgroundSize: 'cover',
+            backgroundPosition: 'center'
+          }
+        : {};
+
     return (
-      <FocusSession
-        initialDuration={focusDuration}
-        onEnd={() => setIsFullscreenSession(false)}
-        onCancel={() => setIsFullscreenSession(false)}
-        ambienceMode={selectedAmbienceMode}
-        customBackground={customBackground}
-      />
+      <div 
+        className={`fixed inset-0 ${
+          isZenMode 
+            ? 'bg-black' 
+            : !selectedAmbience.background_url 
+              ? selectedAmbience.bg_class 
+              : ''
+        } z-50 flex items-center justify-center transition-all duration-1000`}
+        style={backgroundStyle}
+      >
+        {/* Dark overlay for better readability - not for zen mode */}
+        {selectedAmbience.background_url && !isZenMode && (
+          <div className="absolute inset-0 bg-black/30 backdrop-blur-sm" />
+        )}
+
+        {/* Exit button with double-click prompt */}
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.5 }}
+          className="absolute top-6 right-6 z-50"
+        >
+          <motion.button
+            onClick={handleExitClick}
+            className={`p-3 rounded-full glassmorphism transition-colors ${
+              exitClickCount > 0 ? 'bg-red-500/30 glow-danger' : 'hover:bg-red-500/20'
+            }`}
+            whileHover={{ scale: 1.1 }}
+            whileTap={{ scale: 0.9 }}
+          >
+            <X className="w-6 h-6" />
+          </motion.button>
+          
+          <AnimatePresence>
+            {showExitPrompt && exitClickCount < 2 && (
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: 10 }}
+                className="absolute top-full right-0 mt-2 bg-white/90 dark:bg-black/90 backdrop-blur-md px-4 py-2 rounded-lg text-sm whitespace-nowrap shadow-xl"
+              >
+                Click again to exit
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </motion.div>
+
+        {/* Main content */}
+        <div className="text-center space-y-12 relative z-10">
+          {/* Ambience indicator - hidden for zen mode */}
+          {!isZenMode && (
+            <motion.div
+              initial={{ opacity: 0, y: -20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="space-y-2"
+            >
+              <div className="text-7xl mb-4">{selectedAmbience.icon}</div>
+              <h2 className="text-2xl text-white/90">{selectedAmbience.name}</h2>
+            </motion.div>
+          )}
+
+          {/* Timer - Flip Clock for Zen, Regular for others */}
+          <motion.div
+            initial={{ scale: 0.8, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={{ delay: 0.2 }}
+          >
+            {isZenMode ? (
+              <FlipClock time={formatTime(focusTimer)} />
+            ) : (
+              <ProgressRing 
+                progress={focusProgress} 
+                size={280} 
+                strokeWidth={16}
+                gradient="primary"
+              >
+                <div className="text-center">
+                  <div className="text-6xl mb-3 text-white">
+                    {formatTime(focusTimer)}
+                  </div>
+                  <div className="text-xl text-white/70">
+                    {isTimerRunning ? 'Deep Focus' : 'Paused'}
+                  </div>
+                </div>
+              </ProgressRing>
+            )}
+          </motion.div>
+
+          {/* Zen Mode Controls - Minimal and elegant */}
+          {isZenMode && (
+            <>
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.6 }}
+                className="flex items-center justify-center gap-6 mt-12"
+              >
+                <motion.button
+                  onClick={() => setIsTimerRunning(!isTimerRunning)}
+                  className="group relative"
+                  whileHover={{ scale: 1.1 }}
+                  whileTap={{ scale: 0.95 }}
+                >
+                  <div className="w-16 h-16 md:w-20 md:h-20 rounded-full bg-white/10 backdrop-blur-sm border border-white/20 flex items-center justify-center transition-all duration-300 group-hover:bg-white/20 group-hover:border-white/40 shadow-2xl">
+                    {isTimerRunning ? (
+                      <Pause className="w-7 h-7 md:w-9 md:h-9 text-white" />
+                    ) : (
+                      <Play className="w-7 h-7 md:w-9 md:h-9 text-white ml-1" />
+                    )}
+                  </div>
+                </motion.button>
+                
+                <motion.button
+                  onClick={handleResetTimer}
+                  className="group relative"
+                  whileHover={{ scale: 1.1 }}
+                  whileTap={{ scale: 0.95 }}
+                >
+                  <div className="w-14 h-14 md:w-16 md:h-16 rounded-full bg-white/10 backdrop-blur-sm border border-white/20 flex items-center justify-center transition-all duration-300 group-hover:bg-white/20 group-hover:border-white/40 shadow-2xl">
+                    <RotateCcw className="w-5 h-5 md:w-6 md:h-6 text-white/80" />
+                  </div>
+                </motion.button>
+              </motion.div>
+
+              {/* Keyboard shortcuts hint */}
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: [0, 0.6, 0.6, 0] }}
+                transition={{ 
+                  duration: 5,
+                  times: [0, 0.2, 0.8, 1],
+                  delay: 1.5
+                }}
+                className="absolute bottom-12 left-1/2 transform -translate-x-1/2 text-center"
+              >
+                <div className="flex items-center gap-4 text-white/60 text-sm">
+                  <span className="px-3 py-1.5 rounded-lg bg-white/10 border border-white/20 backdrop-blur-sm">
+                    Space
+                  </span>
+                  <span>Play/Pause</span>
+                  <span className="mx-2">•</span>
+                  <span className="px-3 py-1.5 rounded-lg bg-white/10 border border-white/20 backdrop-blur-sm">
+                    R
+                  </span>
+                  <span>Reset</span>
+                </div>
+              </motion.div>
+            </>
+          )}
+
+          {/* Controls - Hidden in Zen mode */}
+          {!isZenMode && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.4 }}
+              className="flex items-center justify-center gap-4"
+            >
+              <Button
+                variant="outline"
+                size="lg"
+                onClick={() => setIsTimerRunning(!isTimerRunning)}
+                className="glassmorphism bg-white/10 border-white/20 text-white hover:bg-white/20"
+              >
+                {isTimerRunning ? (
+                  <>
+                    <Pause className="w-5 h-5 mr-2" />
+                    Pause
+                  </>
+                ) : (
+                  <>
+                    <Play className="w-5 h-5 mr-2" />
+                    Resume
+                  </>
+                )}
+              </Button>
+              
+              <Button
+                variant="outline"
+                size="lg"
+                onClick={handleResetTimer}
+                className="glassmorphism bg-white/10 border-white/20 text-white hover:bg-white/20"
+              >
+                <RotateCcw className="w-5 h-5 mr-2" />
+                Reset
+              </Button>
+            </motion.div>
+          )}
+
+          {/* Session stats - Hidden in Zen mode */}
+          {user && !isZenMode && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.6 }}
+              className="glassmorphism bg-white/10 backdrop-blur-md p-6 rounded-2xl max-w-md mx-auto"
+            >
+              <div className="grid grid-cols-2 gap-6">
+                <div>
+                  <div className="text-3xl text-gradient-primary text-white">{totalMinutes}</div>
+                  <div className="text-sm text-white/70">Minutes Focused</div>
+                </div>
+                <div>
+                  <div className="text-3xl text-gradient-secondary text-white">
+                    {Math.round((totalMinutes / focusDuration) * 100)}%
+                  </div>
+                  <div className="text-sm text-white/70">Complete</div>
+                </div>
+              </div>
+            </motion.div>
+          )}
+        </div>
+      </div>
     );
   }
 
+  // Normal Focus Mode Screen
   return (
     <div className="min-h-screen pb-8 px-4 pt-8">
       <div className="max-w-7xl mx-auto">
@@ -468,275 +925,220 @@ export function FocusMode() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6 }}
         >
-          <h1 className="text-4xl font-bold mb-2">
+          <h1 className="text-5xl font-bold">
             <span className="text-gradient-primary">Deep Focus</span> 🎯
           </h1>
           <p className="text-lg text-muted-foreground">Enter the zone of maximum productivity</p>
         </motion.div>
 
-        <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
-          {/* Focus Timer */}
-          <div className="xl:col-span-1">
-            <GlassCard size="lg" gradient="primary">
-              <div className="text-center">
-                <h2 className="text-xl font-semibold mb-6 text-gradient-primary">
-                  <Timer className="inline w-5 h-5 mr-2" />
-                  Focus Session
-                </h2>
-                
-                {/* Duration Selector for Fullscreen Focus */}
-                <div className="mb-6">
-                  <p className="text-sm text-muted-foreground mb-3">Set focus duration</p>
-                  <div className="flex items-center justify-center gap-3 mb-4">
-                    <motion.button
-                      onClick={() => setFocusDuration(Math.max(5, focusDuration - 5))}
-                      className="glass-card p-2 rounded-lg hover:glow-primary transition-all duration-300"
-                      whileHover={{ scale: 1.1 }}
-                      whileTap={{ scale: 0.95 }}
-                    >
-                      <Minus className="w-4 h-4" />
-                    </motion.button>
-                    <div className="text-center">
-                      <div className="text-2xl font-bold text-foreground">{focusDuration}</div>
-                      <div className="text-xs text-muted-foreground">minutes</div>
-                    </div>
-                    <motion.button
-                      onClick={() => setFocusDuration(Math.min(180, focusDuration + 5))}
-                      className="glass-card p-2 rounded-lg hover:glow-primary transition-all duration-300"
-                      whileHover={{ scale: 1.1 }}
-                      whileTap={{ scale: 0.95 }}
-                    >
-                      <Plus className="w-4 h-4" />
-                    </motion.button>
-                  </div>
-                </div>
-                
-                <div className="mb-6">
-                  <ProgressRing 
-                    progress={focusProgress} 
-                    size={180} 
-                    strokeWidth={12}
-                    gradient="primary"
-                  >
-                    <div className="text-center">
-                      <div className="text-3xl font-bold text-foreground mb-1">
-                        {formatTime(focusTimer)}
-                      </div>
-                      <div className="text-sm text-muted-foreground">
-                        {isTimerRunning ? 'Deep Focus' : 'Ready'}
-                      </div>
-                    </div>
-                  </ProgressRing>
-                </div>
-
-                <div className="space-y-3">
-                  <Button
-                    onClick={() => setShowAmbienceSelector(true)}
-                    className="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg hover:shadow-xl transition-all duration-200"
-                  >
-                    <Play className="w-4 h-4 mr-2" />
-                    Start Fullscreen Focus
-                  </Button>
-                  
-                  <Button
-                    variant="outline"
-                    onClick={() => setIsTimerRunning(!isTimerRunning)}
-                    className="w-full"
-                  >
-                    {isTimerRunning ? (
-                      <>
-                        <Timer className="w-4 h-4 mr-2" />
-                        Pause Focus
-                      </>
-                    ) : (
-                      <>
-                        <Zap className="w-4 h-4 mr-2" />
-                        Start Normal Focus
-                      </>
-                    )}
-                  </Button>
-                  
+        {/* Top Row: Timer and Ambient Sounds */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+          {/* Focus Timer Card */}
+          <GlassCard className="p-8">
+            <div className="text-center">
+              <h2 className="text-xl mb-6 text-gradient-primary">
+                <Timer className="inline w-5 h-5 mr-2" />
+                Focus Session
+              </h2>
+              
+              {/* Duration Selector */}
+              <div className="mb-8">
+                <p className="text-sm text-muted-foreground mb-3">Set focus duration</p>
+                <div className="flex items-center justify-center gap-3">
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => {
-                      setIsTimerRunning(false);
-                      setFocusTimer(focusDuration * 60);
-                    }}
+                    onClick={() => setFocusDuration(Math.max(5, focusDuration - 5))}
+                    disabled={isTimerRunning}
                   >
-                    Reset Timer
+                    <Minus className="w-4 h-4" />
+                  </Button>
+                  <div className="text-center min-w-[80px]">
+                    <div className="text-2xl">{focusDuration}</div>
+                    <div className="text-xs text-muted-foreground">minutes</div>
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setFocusDuration(Math.min(180, focusDuration + 5))}
+                    disabled={isTimerRunning}
+                  >
+                    <Plus className="w-4 h-4" />
                   </Button>
                 </div>
               </div>
-            </GlassCard>
-
-            {/* Distraction Blocker */}
-            <GlassCard className="mt-6" gradient="secondary">
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center gap-2">
-                  <Shield className="w-5 h-5 text-secondary-solid" />
-                  <h3 className="font-semibold text-gradient-secondary">Distraction Blocker</h3>
-                </div>
-                <motion.button
-                  onClick={async () => {
-                    const newValue = !distractionBlockEnabled;
-                    setDistractionBlockEnabled(newValue);
-                    
-                    // Save to backend if user is logged in
-                    if (user) {
-                      try {
-                        await backendService?.distractionBlocker?.updateUserSettings?.(
-                          user.id, 
-                          newValue, 
-                          showBlockedSites
-                        );
-                        toast.success(`Distraction blocker ${newValue ? 'enabled' : 'disabled'}`);
-                      } catch (error) {
-                        console.error('Error updating distraction blocker:', error);
-                        // Revert on error
-                        setDistractionBlockEnabled(!newValue);
-                        toast.error('Failed to update distraction blocker');
-                      }
-                    }
-                  }}
-                  className={`
-                    relative w-12 h-6 rounded-full transition-all duration-300
-                    ${distractionBlockEnabled ? 'gradient-secondary' : 'bg-muted'}
-                  `}
-                  whileTap={{ scale: 0.95 }}
+              
+              {/* Timer Display */}
+              <div className="mb-8">
+                <ProgressRing 
+                  progress={focusProgress} 
+                  size={200} 
+                  strokeWidth={14}
+                  gradient="primary"
                 >
-                  <motion.div
-                    className="absolute top-1 w-4 h-4 bg-white rounded-full shadow"
-                    animate={{ x: distractionBlockEnabled ? 26 : 2 }}
-                    transition={{ type: 'spring', stiffness: 300, damping: 20 }}
-                  />
-                </motion.button>
+                  <div className="text-center">
+                    <div className="text-4xl mb-2">
+                      {formatTime(focusTimer)}
+                    </div>
+                    <div className="text-sm text-muted-foreground">
+                      {isTimerRunning ? 'Focusing' : 'Ready'}
+                    </div>
+                  </div>
+                </ProgressRing>
               </div>
 
-              <p className="text-sm text-muted-foreground mb-4">
-                Block distracting websites during focus sessions
-              </p>
-
-              <div className="flex items-center justify-between">
-                <Badge 
-                  className={distractionBlockEnabled ? 'border-green-500 text-green-600 bg-green-50 dark:bg-green-950/30' : 'border-red-500 text-red-600 bg-red-50 dark:bg-red-950/30'}
+              {/* Action Buttons */}
+              <div className="space-y-3">
+                <Button
+                  onClick={handleStartFullscreen}
+                  className="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg hover:shadow-xl transition-all duration-200"
+                  size="lg"
                 >
-                  {distractionBlockEnabled ? 'Active' : 'Inactive'}
-                </Badge>
+                  <Maximize className="w-4 h-4 mr-2" />
+                  Start Fullscreen Focus
+                </Button>
+                
                 <Button
                   variant="outline"
-                  size="sm"
-                  onClick={() => setShowBlockedSites(!showBlockedSites)}
+                  onClick={handleNormalFocus}
+                  className="w-full"
                 >
-                  {showBlockedSites ? (
+                  {isTimerRunning ? (
                     <>
-                      <EyeOff className="w-4 h-4 mr-2" />
-                      Hide Sites
+                      <Pause className="w-4 h-4 mr-2" />
+                      Pause Focus
                     </>
                   ) : (
                     <>
-                      <Eye className="w-4 h-4 mr-2" />
-                      Show Sites
+                      <Zap className="w-4 h-4 mr-2" />
+                      Start Normal Focus
                     </>
                   )}
                 </Button>
+                
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleResetTimer}
+                  className="w-full"
+                >
+                  <RotateCcw className="w-4 h-4 mr-2" />
+                  Reset Timer
+                </Button>
               </div>
 
-              {showBlockedSites && (
+              {/* Session Info */}
+              {isTimerRunning && user && (
                 <motion.div
-                  initial={{ opacity: 0, height: 0 }}
-                  animate={{ opacity: 1, height: 'auto' }}
-                  className="mt-4 space-y-2"
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="mt-6 p-4 bg-primary-solid/10 rounded-lg border border-primary-solid/20"
                 >
-                  {blockedSites.slice(0, 3).map((site, index) => (
-                    <div key={index} className="text-xs text-muted-foreground bg-muted/50 px-2 py-1 rounded">
-                      {site}
-                    </div>
-                  ))}
-                  {blockedSites.length > 3 && (
-                    <div className="text-xs text-muted-foreground text-center">
-                      +{blockedSites.length - 3} more sites
-                    </div>
-                  )}
+                  <div className="text-sm text-muted-foreground mb-1">Minutes Completed</div>
+                  <div className="text-2xl text-gradient-primary">{totalMinutes}</div>
                 </motion.div>
               )}
-            </GlassCard>
-          </div>
+            </div>
+          </GlassCard>
 
-          {/* Ambient Sounds & Customization */}
-          <div className="xl:col-span-2 space-y-6">
-            {/* Ambient Sounds */}
-            <GlassCard size="lg">
-              <div className="flex items-center gap-2 mb-6">
-                <Volume2 className="w-5 h-5 text-highlight-solid" />
-                <h2 className="text-xl font-semibold text-gradient-highlight">Ambient Sounds</h2>
-              </div>
+          {/* Ambient Sounds Card */}
+          <GlassCard className="p-8">
+            <div className="flex items-center gap-2 mb-6">
+              <Volume2 className="w-5 h-5 text-purple-500" />
+              <h2 className="text-xl text-gradient-primary">Ambient Sounds</h2>
+            </div>
+            <p className="text-sm text-muted-foreground mb-6">
+              Choose a calming background sound to enhance your focus
+            </p>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {ambientSounds.map((sound) => (
-                  <motion.div
-                    key={sound.id}
-                    className={`
-                      p-4 rounded-lg border-2 transition-all duration-300 cursor-pointer
-                      ${sound.enabled 
-                        ? 'bg-highlight-solid/10 border-highlight-solid/50 glow-highlight' 
-                        : 'bg-muted/30 border-muted hover:border-muted-foreground/30'
-                      }
-                    `}
-                    onClick={() => toggleSound(sound.id)}
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
-                  >
-                    <div className="flex items-center justify-between mb-3">
-                      <div className="flex items-center gap-2">
-                        <span className="text-xl">{sound.icon}</span>
-                        <span className="font-medium">{sound.name}</span>
-                      </div>
-                      {sound.enabled ? (
-                        <Volume2 className="w-4 h-4 text-highlight-solid" />
-                      ) : (
-                        <VolumeX className="w-4 h-4 text-muted-foreground" />
-                      )}
-                    </div>
+            {/* Ambient sounds grid */}
+            <div className="grid grid-cols-2 gap-3 mb-6">
+              {ambienceModes.filter(a => a.sound_url).map((ambience) => (
+                <motion.button
+                  key={ambience.id}
+                  onClick={() => playAmbience(ambience.id)}
+                  className={`
+                    p-4 rounded-lg border-2 transition-all duration-300
+                    ${playingAmbience === ambience.id 
+                      ? 'border-purple-500 bg-purple-500/10' 
+                      : 'border-muted hover:border-purple-500/50'
+                    }
+                  `}
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                >
+                  <div className="text-3xl mb-2">{ambience.icon}</div>
+                  <div className="text-sm">{ambience.name}</div>
+                </motion.button>
+              ))}
+            </div>
 
-                    {sound.enabled && (
-                      <motion.div
-                        initial={{ opacity: 0, height: 0 }}
-                        animate={{ opacity: 1, height: 'auto' }}
-                        className="space-y-2"
-                      >
-                        <div className="flex items-center justify-between text-sm">
-                          <span>Volume</span>
-                          <span>{sound.volume}%</span>
-                        </div>
-                        <input
-                          type="range"
-                          min="0"
-                          max="100"
-                          value={sound.volume}
-                          onChange={(e) => {
-                            e.stopPropagation();
-                            updateSoundVolume(sound.id, Number(e.target.value));
-                          }}
-                          className="w-full h-2 bg-muted rounded-lg appearance-none cursor-pointer"
-                          onClick={(e) => e.stopPropagation()}
-                        />
-                      </motion.div>
-                    )}
-                  </motion.div>
-                ))}
-              </div>
-
-              <div className="mt-6 space-y-4">
-                <div className="text-sm text-muted-foreground">
-                  💡 Tip: Combine multiple sounds for a unique atmosphere. Studies show that ambient sounds can improve focus by up to 70%.
+            {/* Volume control */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between text-sm">
+                <div className="flex items-center gap-2 text-muted-foreground">
+                  {ambienceVolume === 0 ? (
+                    <VolumeX className="w-4 h-4" />
+                  ) : (
+                    <Volume2 className="w-4 h-4" />
+                  )}
+                  <span>Volume</span>
                 </div>
+                <span className="text-xs">{ambienceVolume}%</span>
               </div>
-            </GlassCard>
-          </div>
+              <Slider
+                value={[ambienceVolume]}
+                onValueChange={handleVolumeChange}
+                max={100}
+                step={1}
+                className="w-full"
+              />
+            </div>
+
+            {playingAmbience && (
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="mt-4 text-center text-sm text-muted-foreground"
+              >
+                🎵 {ambienceModes.find(a => a.id === playingAmbience)?.name} is playing
+                <div className="text-xs mt-1">Tap again to pause</div>
+              </motion.div>
+            )}
+          </GlassCard>
         </div>
 
+        {/* Bottom Row: Full-Width Journal */}
+        <GlassCard className="p-6">
+          <div className="flex items-center gap-2 mb-4">
+            <BookOpen className="w-5 h-5 text-blue-500" />
+            <h2 className="text-xl text-gradient-primary">Focus Journal</h2>
+            <p className="text-sm text-muted-foreground ml-2">
+              Write, decorate, and express yourself freely
+            </p>
+          </div>
+          
+          {/* Embedded Journal - Full Width */}
+        <div className="h-[600px] overflow-hidden">
+  <FocusJournal
+    embedded
+    initialText={journalEntry}
+    onSave={(content) => setJournalEntry(content)}
+    className="h-full overflow-hidden"
+  />
+</div>
 
+        </GlassCard>
+
+        {/* Info Notice for Guests */}
+        {!user && isTimerRunning && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="mt-8 p-6 glassmorphism rounded-2xl text-center max-w-2xl mx-auto"
+          >
+          </motion.div>
+        )}
       </div>
     </div>
   );

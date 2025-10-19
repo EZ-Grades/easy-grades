@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import {
+import { 
   Coffee,
   Play,
   Pause,
@@ -16,21 +16,23 @@ import {
   Trophy,
   Clock,
   Star,
-  ChevronRight,
   RotateCcw,
   Dumbbell,
   Timer,
-  Shuffle,
+  User,
+  Activity,
+  Rotate3D,
   Eye,
   Hand,
-  Volume2,
-  SkipForward
+  Move,
+  Music
 } from 'lucide-react';
-
 import { GlassCard } from '../GlassCard';
 import { Button } from '../ui/button';
 import { Badge } from '../ui/badge';
 import { GameContainer, GameType } from '../games/GameContainer';
+import { MusicPlayer } from '../MusicPlayer';
+import { toast } from 'sonner@2.0.3';
 
 interface MiniGame {
   id: string;
@@ -50,11 +52,9 @@ interface StretchExercise {
   name: string;
   duration: number;
   description: string;
-  difficulty: 'Easy' | 'Medium' | 'Hard';
-  icon: any;
-  gradient: string;
+  difficulty: 'easy' | 'medium' | 'hard';
   instructions: string[];
-
+  gif?: string;
 }
 
 export function BreakMode() {
@@ -67,9 +67,10 @@ export function BreakMode() {
   const [selectedExercise, setSelectedExercise] = useState<StretchExercise | null>(null);
   const [exerciseTimer, setExerciseTimer] = useState(0);
   const [exerciseActive, setExerciseActive] = useState(false);
-  const [currentTrack, setCurrentTrack] = useState('Relaxing Piano');
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [volume, setVolume] = useState(50); 
+  const [exerciseCountdown, setExerciseCountdown] = useState(0);
+  const [showCountdown, setShowCountdown] = useState(false);
+  const [breathingVoiceGuidance, setBreathingVoiceGuidance] = useState('');
+
   const miniGames: MiniGame[] = [
     {
       id: '1',
@@ -175,9 +176,7 @@ export function BreakMode() {
       name: 'Neck Tension Relief',
       duration: 30,
       description: 'Gentle neck movements to release built-up tension',
-      difficulty: 'Easy',
-      icon: RotateCcw,
-      gradient: 'from-purple-500 via-purple-600 to-indigo-600',
+      difficulty: 'easy',
       instructions: [
         'Sit up straight with shoulders relaxed',
         'Slowly roll your head in a circle',
@@ -190,10 +189,7 @@ export function BreakMode() {
       name: 'Shoulder Blade Squeeze',
       duration: 20,
       description: 'Release shoulder tension from long study sessions',
-      difficulty: 'Easy',
-      icon: Zap,
-      gradient: 'from-pink-500 via-rose-600 to-red-600',
-
+      difficulty: 'easy',
       instructions: [
         'Sit tall with arms at your sides',
         'Squeeze shoulder blades together',
@@ -206,10 +202,7 @@ export function BreakMode() {
       name: 'Spinal Twist',
       duration: 45,
       description: 'Improve spinal mobility and reduce back stiffness',
-      difficulty: 'Medium',
-      icon: Shuffle,
-      gradient: 'from-blue-500 via-cyan-600 to-teal-600',
-
+      difficulty: 'medium',
       instructions: [
         'Sit with feet flat on the floor',
         'Place one hand behind you',
@@ -222,10 +215,7 @@ export function BreakMode() {
       name: 'Eye Movement Exercise',
       duration: 15,
       description: 'Rest tired eyes from screen fatigue',
-      difficulty: 'Easy',
-      icon: Eye,
-      gradient: 'from-green-500 via-emerald-600 to-cyan-600',
-
+      difficulty: 'easy',
       instructions: [
         'Look far into the distance',
         'Focus on a near object',
@@ -238,10 +228,7 @@ export function BreakMode() {
       name: 'Wrist & Finger Stretches',
       duration: 25,
       description: 'Prevent repetitive strain from typing',
-      difficulty: 'Easy',
-      icon: Hand,
-      gradient: 'from-orange-500 via-amber-600 to-yellow-600',
-
+      difficulty: 'easy',
       instructions: [
         'Extend arms forward, palms down',
         'Gently pull fingers back with other hand',
@@ -254,10 +241,7 @@ export function BreakMode() {
       name: 'Hip Flexor Stretch',
       duration: 40,
       description: 'Counter the effects of prolonged sitting',
-      difficulty: 'Medium',
-      icon: Dumbbell,
-      gradient: 'from-indigo-500 via-purple-600 to-pink-600',
-
+      difficulty: 'medium',
       instructions: [
         'Stand and step one foot forward',
         'Lower into a lunge position',
@@ -266,15 +250,32 @@ export function BreakMode() {
       ]
     }
   ];
-  
-  const relaxingTracks = [
-    'Relaxing Piano',
-    'Nature Sounds',
-    'Meditation Bell',
-    'Ocean Waves',
-    'Forest Rain',
-    'Ambient Space'
-  ];
+
+  // Get icon for exercise based on type
+  const getExerciseIcon = (exerciseId: string) => {
+    switch (exerciseId) {
+      case '1': return User; // Neck
+      case '2': return Activity; // Shoulder
+      case '3': return Rotate3D; // Spinal
+      case '4': return Eye; // Eye
+      case '5': return Hand; // Wrist/Finger
+      case '6': return Move; // Hip Flexor
+      default: return Dumbbell;
+    }
+  };
+
+  // Get gradient for exercise icon
+  const getExerciseGradient = (exerciseId: string) => {
+    switch (exerciseId) {
+      case '1': return 'from-blue-500 to-cyan-600'; // Neck
+      case '2': return 'from-purple-500 to-pink-600'; // Shoulder
+      case '3': return 'from-emerald-500 to-teal-600'; // Spinal
+      case '4': return 'from-amber-500 to-orange-600'; // Eye
+      case '5': return 'from-indigo-500 to-purple-600'; // Wrist/Finger
+      case '6': return 'from-rose-500 to-red-600'; // Hip Flexor
+      default: return 'from-emerald-500 to-teal-600';
+    }
+  };
 
   // Breathing exercise logic
   useEffect(() => {
@@ -284,12 +285,15 @@ export function BreakMode() {
         setBreathingTimer((prev) => {
           if (breathingPhase === 'inhale' && prev >= 4) {
             setBreathingPhase('hold');
+            setBreathingVoiceGuidance('Hold your breath...');
             return 0;
           } else if (breathingPhase === 'hold' && prev >= 7) {
             setBreathingPhase('exhale');
+            setBreathingVoiceGuidance('Breathe out slowly...');
             return 0;
           } else if (breathingPhase === 'exhale' && prev >= 8) {
             setBreathingPhase('inhale');
+            setBreathingVoiceGuidance('Breathe in deeply...');
             setBreathingCycle(cycle => cycle + 1);
             return 0;
           }
@@ -300,6 +304,33 @@ export function BreakMode() {
     return () => clearInterval(interval);
   }, [breathingActive, breathingPhase]);
 
+  // Update voice guidance when breathing starts
+  useEffect(() => {
+    if (breathingActive && breathingPhase === 'inhale' && breathingTimer === 0) {
+      setBreathingVoiceGuidance('Breathe in deeply...');
+    }
+  }, [breathingActive, breathingPhase, breathingTimer]);
+
+  // Countdown timer before exercise starts
+  useEffect(() => {
+    let interval: NodeJS.Timeout;
+    if (showCountdown && exerciseCountdown > 0) {
+      interval = setInterval(() => {
+        setExerciseCountdown(prev => {
+          if (prev === 1) {
+            // Countdown finished, start exercise
+            setShowCountdown(false);
+            setExerciseActive(true);
+            toast.success('Exercise started! 💪');
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+    }
+    return () => clearInterval(interval);
+  }, [showCountdown, exerciseCountdown]);
+
   // Exercise timer
   useEffect(() => {
     let interval: NodeJS.Timeout;
@@ -308,8 +339,12 @@ export function BreakMode() {
         setExerciseTimer(prev => {
           if (prev >= selectedExercise.duration) {
             setExerciseActive(false);
-            setSelectedExercise(null);
-            return 0;
+            toast.success('Exercise completed! 🌿');
+            setTimeout(() => {
+              setSelectedExercise(null);
+              setExerciseTimer(0);
+            }, 2000);
+            return prev;
           }
           return prev + 1;
         });
@@ -319,11 +354,12 @@ export function BreakMode() {
   }, [exerciseActive, selectedExercise]);
 
   const getDifficultyColor = (difficulty: string) => {
-    switch (difficulty) {
-      case 'Easy': return 'border-green-400 text-green-600 bg-green-50 dark:bg-green-950/30 dark:text-green-400';
-      case 'Medium': return 'border-yellow-400 text-yellow-600 bg-yellow-50 dark:bg-yellow-950/30 dark:text-yellow-400';
-      case 'Hard': return 'border-red-400 text-red-600 bg-red-50 dark:bg-red-950/30 dark:text-red-400';
-      default: return 'border-gray-400 text-gray-600 bg-gray-50 dark:bg-gray-950/30';
+    const normalizedDifficulty = difficulty.charAt(0).toUpperCase() + difficulty.slice(1).toLowerCase();
+    switch (normalizedDifficulty) {
+      case 'Easy': return 'border-green-500 text-green-700 bg-green-100 dark:bg-green-950/50 dark:text-green-300 dark:border-green-400';
+      case 'Medium': return 'border-yellow-500 text-yellow-700 bg-yellow-100 dark:bg-yellow-950/50 dark:text-yellow-300 dark:border-yellow-400';
+      case 'Hard': return 'border-red-500 text-red-700 bg-red-100 dark:bg-red-950/50 dark:text-red-300 dark:border-red-400';
+      default: return 'border-gray-500 text-gray-700 bg-gray-100 dark:bg-gray-950/50 dark:text-gray-300';
     }
   };
 
@@ -345,24 +381,15 @@ export function BreakMode() {
   const startExercise = (exercise: StretchExercise) => {
     setSelectedExercise(exercise);
     setExerciseTimer(0);
-    setExerciseActive(true);
+    setExerciseCountdown(3); // 3 second countdown
+    setShowCountdown(true);
+    toast.info('Get ready! Starting in 3...');
   };
 
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
-  };
-  const nextTrack = () => {
-    const currentIndex = relaxingTracks.indexOf(currentTrack);
-    const nextIndex = (currentIndex + 1) % relaxingTracks.length;
-    setCurrentTrack(relaxingTracks[nextIndex]);
-  };
-
-  const shuffleTrack = () => {
-    const otherTracks = relaxingTracks.filter(track => track !== currentTrack);
-    const randomTrack = otherTracks[Math.floor(Math.random() * otherTracks.length)];
-    setCurrentTrack(randomTrack);
   };
 
   // Show game if one is selected
@@ -379,7 +406,7 @@ export function BreakMode() {
     <div className="min-h-screen pb-8 px-4 md:px-6 pt-4 md:pt-8">
       <div className="max-w-7xl mx-auto space-y-6 md:space-y-8">
         {/* Enhanced Header */}
-        <motion.div
+        <motion.div 
           className="text-center space-y-4"
           initial={{ opacity: 0, y: -30 }}
           animate={{ opacity: 1, y: 0 }}
@@ -440,7 +467,7 @@ export function BreakMode() {
               className="relative group"
             >
               <motion.div
-                whileHover={{
+                whileHover={{ 
                   scale: 1.02,
                   y: -5
                 }}
@@ -450,7 +477,7 @@ export function BreakMode() {
                 <GlassCard className="h-full p-6 relative overflow-hidden cursor-pointer transition-all duration-300 hover:shadow-xl hover:shadow-black/10 dark:hover:shadow-black/30">
                   {/* Background Gradient */}
                   <div className={`absolute inset-0 bg-gradient-to-br ${game.gradient} opacity-5 group-hover:opacity-10 transition-opacity duration-300`} />
-
+                  
                   {/* Content */}
                   <div className="relative z-10 h-full flex flex-col">
                     {/* Header */}
@@ -459,13 +486,13 @@ export function BreakMode() {
                         <game.icon className="w-6 h-6" />
                       </div>
                       <div className="flex flex-col items-end gap-2">
-                        <Badge
-                          variant="outline"
-                          className={`text-xs font-medium ${getDifficultyColor(game.difficulty)}`}
+                        <Badge 
+                          variant="outline" 
+                          className={`text-xs ${getDifficultyColor(game.difficulty)}`}
                         >
                           {game.difficulty}
                         </Badge>
-                        <span className={`text-xs font-medium ${getCategoryColor(game.category)}`}>
+                        <span className={`text-xs ${getCategoryColor(game.category)}`}>
                           {game.category}
                         </span>
                       </div>
@@ -473,13 +500,13 @@ export function BreakMode() {
 
                     {/* Game Info */}
                     <div className="flex-1 space-y-3">
-                      <h3 className="text-lg font-semibold text-foreground line-clamp-1">
+                      <h3 className="text-lg line-clamp-1">
                         {game.title}
                       </h3>
                       <p className="text-sm text-muted-foreground line-clamp-2">
                         {game.description}
                       </p>
-
+                      
                       {/* Features */}
                       <div className="space-y-1">
                         {game.features.slice(0, 2).map((feature, idx) => (
@@ -498,7 +525,7 @@ export function BreakMode() {
                           <Clock className="w-3 h-3" />
                           <span>{game.duration}</span>
                         </div>
-
+                        
                         <Button
                           onClick={() => playGame(game.gameType)}
                           size="sm"
@@ -528,9 +555,37 @@ export function BreakMode() {
           ))}
         </motion.div>
 
+        {/* Exercise Countdown Overlay */}
+        <AnimatePresence>
+          {showCountdown && selectedExercise && (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.8 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.8 }}
+              className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-6"
+            >
+              <GlassCard className="text-center max-w-md w-full p-12">
+                <h3 className="text-2xl mb-6 text-gradient-primary">Get Ready!</h3>
+                <motion.div
+                  className="text-8xl mb-6"
+                  animate={{ 
+                    scale: [1, 1.2, 1],
+                    color: ['#7D4AE1', '#3AB0A0', '#7D4AE1']
+                  }}
+                  transition={{ duration: 1, repeat: Infinity }}
+                >
+                  {exerciseCountdown}
+                </motion.div>
+                <p className="text-muted-foreground mb-4">{selectedExercise.name}</p>
+                <p className="text-sm text-muted-foreground">Starting in {exerciseCountdown} seconds...</p>
+              </GlassCard>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
         {/* Exercise Timer Overlay */}
         <AnimatePresence>
-          {selectedExercise && exerciseActive && (
+          {selectedExercise && exerciseActive && !showCountdown && (
             <motion.div
               initial={{ opacity: 0, scale: 0.8 }}
               animate={{ opacity: 1, scale: 1 }}
@@ -538,8 +593,8 @@ export function BreakMode() {
               className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-6"
             >
               <GlassCard className="text-center max-w-md w-full">
-                <h3 className="text-2xl font-bold mb-2 text-gradient-primary">{selectedExercise.name}</h3>
-                <div className="text-6xl font-bold text-gradient-secondary mb-4">
+                <h3 className="text-2xl mb-2 text-gradient-primary">{selectedExercise.name}</h3>
+                <div className="text-6xl mb-4 text-gradient-secondary">
                   {formatTime(selectedExercise.duration - exerciseTimer)}
                 </div>
                 <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-3 mb-6">
@@ -583,298 +638,259 @@ export function BreakMode() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8, delay: 0.8 }}
         >
-          {/* Section Header */}
-          <div className="text-center mb-10">
-            <h2 className="text-3xl font-bold text-gradient-secondary mb-2">
+          <div className="text-center mb-8">
+            <h2 className="text-3xl text-gradient-secondary mb-2">
               Stretch & Movement
             </h2>
-            <p className="text-muted-foreground max-w-xl mx-auto">
-              Combat study fatigue with short, targeted exercises — designed to refresh your body and mind.
+            <p className="text-muted-foreground">
+              Combat study fatigue with targeted exercises
             </p>
-            <div className="mt-4 h-1 w-32 mx-auto 
-      bg-gradient-to-r from-emerald-400 to-teal-500 
-      dark:from-emerald-600 dark:to-teal-700 
-      rounded-full shadow-md shadow-emerald-500/20" />
           </div>
 
-          {/* Grid of Exercises */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {stretchExercises.map((exercise, index) => (
               <motion.div
                 key={exercise.id}
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.6, delay: index * 0.1 }}
-                whileHover={{ scale: 1.03, y: -6 }}
-                whileTap={{ scale: 0.97 }}
+                transition={{ duration: 0.5, delay: index * 0.1 }}
                 className="relative group"
               >
-                <GlassCard className="h-full p-6 relative overflow-hidden backdrop-blur-lg cursor-pointer 
-          transition-all duration-300 border border-border/50 
-          hover:shadow-xl hover:shadow-emerald-500/20 dark:hover:shadow-emerald-700/30"
+                <motion.div
+                  whileHover={{ scale: 1.02, y: -5 }}
+                  whileTap={{ scale: 0.98 }}
+                  className="h-full"
                 >
-                  {/* Background Gradient */}
-                  <div className="absolute inset-0 bg-gradient-to-br 
-            from-emerald-400/60 to-teal-500/60 
-            dark:from-emerald-600/50 dark:to-teal-700/50 
-            opacity-10 group-hover:opacity-20 
-            transition-all duration-300" />
-
-                  {/* Content */}
-                  <div className="relative z-10 h-full flex flex-col">
-                    {/* Header */}
-                    <div className="flex items-start justify-between mb-4">
-                      <div className={`p-3 rounded-xl bg-gradient-to-br ${exercise.gradient} text-white shadow-lg`}>
-                        <exercise.icon className="w-6 h-6" />
-                      </div>
-                      <div className="flex flex-col items-end gap-2">
-                        <Badge
-                          variant="outline"
-                          className={`text-xs font-medium ${getDifficultyColor(exercise.difficulty)}`}
-                        >
-                          {exercise.difficulty}
-                        </Badge>
-                        <span className={`text-xs font-medium ${getCategoryColor(exercise.category)}`}>
-                          {exercise.category}
-                        </span>
-                      </div>
-                    </div>
-
-                    {/* Exercise Info */}
-                    <div className="flex-1 space-y-3">
-                      <h3 className="text-lg font-semibold text-foreground line-clamp-1">
-                        {exercise.name}
-                      </h3>
-                      <p className="text-sm text-muted-foreground line-clamp-2">
-                        {exercise.description}
-                      </p>
-
-                      {/* Instructions Preview */}
-                      <div className="space-y-1">
-                        {exercise.instructions.slice(0, 2).map((instruction, idx) => (
-                          <div
-                            key={idx}
-                            className="flex items-center gap-2 text-xs text-muted-foreground"
+                  <GlassCard className="h-full p-6 relative overflow-hidden cursor-pointer transition-all duration-300 hover:shadow-xl hover:shadow-black/10 dark:hover:shadow-black/30">
+                    {/* Background Gradient */}
+                    <div className={`absolute inset-0 bg-gradient-to-br ${getExerciseGradient(exercise.id)} opacity-5 group-hover:opacity-10 transition-opacity duration-300`} />
+                    
+                    {/* Content */}
+                    <div className="relative z-10 h-full flex flex-col">
+                      {/* Header */}
+                      <div className="flex items-start justify-between mb-4">
+                        <div className={`p-3 rounded-xl bg-gradient-to-br ${getExerciseGradient(exercise.id)} text-white shadow-lg`}>
+                          {(() => {
+                            const ExerciseIcon = getExerciseIcon(exercise.id);
+                            return <ExerciseIcon className="w-6 h-6" />;
+                          })()}
+                        </div>
+                        <div className="flex flex-col items-end gap-2">
+                          <Badge 
+                            variant="outline" 
+                            className={`text-xs ${getDifficultyColor(exercise.difficulty)}`}
                           >
-                            <div className="w-1 h-1 rounded-full bg-current" />
-                            <span className="line-clamp-1">{instruction}</span>
+                            {exercise.difficulty.charAt(0).toUpperCase() + exercise.difficulty.slice(1)}
+                          </Badge>
+                          <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                            <Timer className="w-3 h-3" />
+                            <span>{exercise.duration}s</span>
                           </div>
-                        ))}
+                        </div>
+                      </div>
+
+                      {/* Exercise Info */}
+                      <div className="flex-1 space-y-3">
+                        <h3 className="text-lg line-clamp-1">
+                          {exercise.name}
+                        </h3>
+                        <p className="text-sm text-muted-foreground line-clamp-2">
+                          {exercise.description}
+                        </p>
+                        
+                        {/* Instructions Preview */}
+                        <div className="space-y-1">
+                          {exercise.instructions.slice(0, 2).map((instruction, idx) => (
+                            <div key={idx} className="flex items-center gap-2 text-xs text-muted-foreground">
+                              <div className="w-1 h-1 rounded-full bg-current" />
+                              <span className="line-clamp-1">{instruction}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Footer */}
+                      <div className="pt-4 border-t border-border/50">
+                        <Button
+                          onClick={() => startExercise(exercise)}
+                          size="sm"
+                          className="w-full bg-gradient-to-r from-emerald-500 to-teal-600 text-white border-0 hover:shadow-lg transition-all duration-300"
+                        >
+                          <Play className="w-3 h-3 mr-1" />
+                          Start Exercise
+                        </Button>
                       </div>
                     </div>
-
-                    {/* Footer */}
-                    <div className="pt-4 border-t border-border/50">
-                      <Button
-                        onClick={() => startExercise(exercise)}
-                        size="sm"
-                        className="w-full bg-gradient-to-r from-indigo-500 via-purple-600 to-pink-600 
-                  text-white border-0 hover:shadow-lg hover:shadow-emerald-500/30 
-                  transition-all duration-300"
-                      >
-                        <Play className="w-3 h-3 mr-1" />
-                        Start Exercise
-                      </Button>
-                    </div>
-                  </div>
-                </GlassCard>
+                  </GlassCard>
+                </motion.div>
               </motion.div>
             ))}
           </div>
         </motion.div>
 
-
-
-        {/* Breathing Exercise Section */}
-        <div className="text-center mb-8">
-            <h2 className="text-3xl font-bold text-gradient-secondary mb-2">
+        {/* Breathing Exercise & Music Player Section */}
+        <motion.div
+          className="mt-12"
+          initial={{ opacity: 0, y: 30 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.8, delay: 0.6 }}
+        >
+          <div className="text-center mb-8">
+            <h2 className="text-3xl text-gradient-secondary mb-2">
               Quick Relaxation
             </h2>
             <p className="text-muted-foreground">
-              Take a moment to reset with guided breathing
+              Take a moment to reset with guided breathing and calming music
             </p>
-        </div>
-        
-        <motion.div
-  className="mt-12 flex flex-col md:flex-row gap-6"
-  initial={{ opacity: 0, y: 30 }}
-  animate={{ opacity: 1, y: 0 }}
-  transition={{ duration: 0.8, delay: 0.6 }}
-        >
-          
-  {/* Breathing Exercise */}
-  <div className="flex-1">
-    <GlassCard className="text-center relative overflow-hidden p-6 h-full flex flex-col justify-between">
-      <div className="absolute inset-0 opacity-5">
-        <div className="absolute inset-0 bg-gradient-to-br from-blue-500 to-green-500" />
-      </div>
-
-      <div className="relative z-10 flex flex-col justify-between h-full">
-        <div>
-          <div className="flex items-center justify-center gap-2 mb-4">
-            <Wind className="w-6 h-6 text-blue-500" />
-            <h3 className="text-xl font-semibold text-gradient-secondary">
-              4-7-8 Breathing
-            </h3>
           </div>
 
-          <div className="relative mb-6">
-            <motion.div
-              className="w-32 h-32 mx-auto rounded-full bg-gradient-to-r from-blue-500 to-green-500 flex items-center justify-center relative shadow-2xl"
-              animate={{
-                scale: breathingActive
-                  ? breathingPhase === 'inhale' ? 1.3
-                    : breathingPhase === 'hold' ? 1.3
-                      : 0.9
-                  : 1
-              }}
-              transition={{
-                duration: breathingPhase === 'inhale' ? 4
-                  : breathingPhase === 'hold' ? 7
-                    : 8,
-                ease: 'easeInOut'
-              }}
-            >
-              <div className="text-white font-bold text-center">
-                <div className="text-sm capitalize mb-1">
-                  {breathingActive ? breathingPhase : 'Ready'}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 max-w-5xl mx-auto px-4 md:px-0">
+            {/* Breathing Exercise */}
+            <div className="w-full">
+              <GlassCard className="text-center relative overflow-hidden h-full">
+                {/* Background Pattern */}
+                <div className="absolute inset-0 opacity-5">
+                  <div className="absolute inset-0 bg-gradient-to-br from-blue-500 to-green-500" />
                 </div>
-                <div className="text-2xl">
-                  {breathingActive ? `${breathingTimer}s` : '4-7-8'}
+                
+                <div className="relative z-10 p-8">
+                  <div className="flex items-center justify-center gap-2 mb-6">
+                    <Wind className="w-6 h-6 text-blue-500" />
+                    <h3 className="text-xl text-gradient-secondary">
+                      4-7-8 Breathing
+                    </h3>
+                  </div>
+                  
+                  <div className="relative mb-8">
+                    <motion.div
+                      className="w-32 h-32 mx-auto rounded-full bg-gradient-to-r from-blue-500 to-green-500 flex items-center justify-center relative shadow-2xl"
+                      animate={{
+                        scale: breathingActive 
+                          ? breathingPhase === 'inhale' ? 1.3 
+                            : breathingPhase === 'hold' ? 1.3 
+                            : 0.9
+                          : 1
+                      }}
+                      transition={{ 
+                        duration: breathingPhase === 'inhale' ? 4 
+                                : breathingPhase === 'hold' ? 7 
+                                : 8,
+                        ease: 'easeInOut'
+                      }}
+                    >
+                      <div className="text-white text-center">
+                        <div className="text-sm capitalize mb-1">
+                          {breathingActive ? breathingPhase : 'Ready'}
+                        </div>
+                        <div className="text-2xl">
+                          {breathingActive ? `${breathingTimer}s` : '4-7-8'}
+                        </div>
+                      </div>
+                      
+                      {breathingActive && (
+                        <motion.div
+                          className="absolute inset-0 rounded-full border-4 border-white/30"
+                          animate={{ 
+                            scale: [1, 1.2, 1],
+                            opacity: [0.3, 0.8, 0.3]
+                          }}
+                          transition={{ 
+                            duration: 2, 
+                            repeat: Infinity,
+                            ease: "easeInOut"
+                          }}
+                        />
+                      )}
+                    </motion.div>
+                  </div>
+
+                  {/* Voice Guidance */}
+                  {breathingActive && breathingVoiceGuidance && (
+                    <motion.div
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="mb-6 py-4 px-6 bg-blue-500/10 rounded-lg border border-blue-500/20"
+                    >
+                      <p className="text-lg text-blue-600 dark:text-blue-400 italic">
+                        "{breathingVoiceGuidance}"
+                      </p>
+                      <p className="text-xs text-muted-foreground mt-2">
+                        🎧 ASMR Female Voice Guidance
+                      </p>
+                    </motion.div>
+                  )}
+
+                  {breathingActive && (
+                    <div className="mb-6 space-y-2">
+                      <div className="flex items-center justify-between text-sm">
+                        <span>Cycles completed</span>
+                        <span>{breathingCycle}</span>
+                      </div>
+                      <div className="text-xs text-muted-foreground">
+                        Inhale 4s → Hold 7s → Exhale 8s
+                      </div>
+                    </div>
+                  )}
+
+                  {!breathingActive && (
+                    <div className="mb-6 text-sm text-muted-foreground">
+                      <p>The 4-7-8 breathing technique helps reduce anxiety and promote relaxation.</p>
+                      <p className="mt-2">🎙️ Includes calming voice guidance</p>
+                    </div>
+                  )}
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <Button
+                      variant={breathingActive ? "outline" : "default"}
+                      onClick={() => {
+                        setBreathingActive(!breathingActive);
+                        if (!breathingActive) {
+                          setBreathingVoiceGuidance('Breathe in deeply...');
+                          toast.success('Breathing session started 🌿');
+                        } else {
+                          toast.success('Session complete 🌿');
+                        }
+                      }}
+                      className="bg-gradient-to-r from-blue-600 to-green-600 text-white border-0"
+                    >
+                      {breathingActive ? (
+                        <>
+                          <Pause className="w-4 h-4 mr-2" />
+                          Stop
+                        </>
+                      ) : (
+                        <>
+                          <Play className="w-4 h-4 mr-2" />
+                          Start
+                        </>
+                      )}
+                    </Button>
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        setBreathingActive(false);
+                        setBreathingCycle(0);
+                        setBreathingTimer(0);
+                        setBreathingPhase('inhale');
+                        setBreathingVoiceGuidance('');
+                      }}
+                      disabled={!breathingActive}
+                    >
+                      <RotateCcw className="w-4 h-4 mr-2" />
+                      Reset
+                    </Button>
+                  </div>
                 </div>
-              </div>
-
-              {breathingActive && (
-                <motion.div
-                  className="absolute inset-0 rounded-full border-4 border-white/30"
-                  animate={{
-                    scale: [1, 1.2, 1],
-                    opacity: [0.3, 0.8, 0.3]
-                  }}
-                  transition={{
-                    duration: 2,
-                    repeat: Infinity,
-                    ease: "easeInOut"
-                  }}
-                />
-              )}
-            </motion.div>
-          </div>
-
-          {breathingActive && (
-            <div className="mb-4 space-y-1">
-              <div className="flex items-center justify-between text-sm">
-                <span>Cycles completed</span>
-                <span>{breathingCycle}</span>
-              </div>
-              <div className="text-xs text-muted-foreground">
-                Inhale 4s → Hold 7s → Exhale 8s
-              </div>
+              </GlassCard>
             </div>
-          )}
-        </div>
 
-        <div className="grid grid-cols-2 gap-2 mt-4">
-          <Button
-            variant={breathingActive ? "outline" : "default"}
-            onClick={() => setBreathingActive(!breathingActive)}
-            className="bg-gradient-to-r from-blue-600 to-green-600 text-white border-0"
-          >
-            {breathingActive ? (
-              <>
-                <Pause className="w-4 h-4 mr-2" />
-                Stop
-              </>
-            ) : (
-              <>
-                <Play className="w-4 h-4 mr-2" />
-                Start
-              </>
-            )}
-          </Button>
-          <Button
-            variant="outline"
-            onClick={() => {
-              setBreathingActive(false);
-              setBreathingCycle(0);
-              setBreathingTimer(0);
-              setBreathingPhase('inhale');
-            }}
-            disabled={!breathingActive}
-          >
-            <RotateCcw className="w-4 h-4 mr-2" />
-            Reset
-          </Button>
-        </div>
-      </div>
-    </GlassCard>
-  </div>
-
-  {/* Music Player */}
-  <div className="flex-1">
-    <GlassCard className="text-center p-6 relative h-full flex flex-col justify-between">
-      <div className="relative flex flex-col justify-between h-full">
-        <div>
-          <div className="w-24 h-24 mx-auto rounded-full gradient-primary flex items-center justify-center mb-4">
-            <motion.div
-              animate={{ rotate: isPlaying ? 360 : 0 }}
-              transition={{ duration: 20, repeat: isPlaying ? Infinity : 0, ease: 'linear' }}
-            >
-              <Volume2 className="w-8 h-8 text-white" />
-            </motion.div>
+            {/* Music Player */}
+            <div className="w-full">
+              <MusicPlayer autoPlay={false} showQueue={true} />
+            </div>
           </div>
-          <h3 className="font-semibold text-lg mb-1">{currentTrack}</h3>
-          <Badge variant="default">Now Playing</Badge>
-
-          <div className="flex justify-center gap-3 mb-4 mt-4">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={shuffleTrack}
-            >
-              <Shuffle className="w-4 h-4 mr-1" />
-              Shuffle
-            </Button>
-            <Button
-              variant="default"
-              onClick={() => setIsPlaying(!isPlaying)}
-            >
-              {isPlaying ? <Pause className="w-5 h-5 mr-1" /> : <Play className="w-5 h-5 mr-1" />}
-              {isPlaying ? 'Pause' : 'Play'}
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={nextTrack}
-            >
-              <SkipForward className="w-4 h-4 mr-1" />
-              Next
-            </Button>
-          </div>
-        </div>
-
-        <div className="space-y-3">
-          <div className="flex items-center justify-between text-sm">
-            <span>Volume</span>
-            <span>{volume}%</span>
-          </div>
-          <input
-            type="range"
-            min="0"
-            max="100"
-            value={volume}
-            onChange={(e) => setVolume(Number(e.target.value))}
-            className="w-full h-2 bg-muted rounded-lg appearance-none cursor-pointer slider"
-          />
-        </div>
-      </div>
-    </GlassCard>
-  </div>
-</motion.div>
-
+        </motion.div>
       </div>
     </div>
-
   );
-
 }

@@ -1,11 +1,11 @@
 import { useState } from 'react';
-import { supabase } from '../../lib/supabase';
-import { GlassCard } from '../GlassCard';
+import { motion } from 'motion/react';
+import { Mail, ArrowLeft, CheckCircle, AlertCircle } from 'lucide-react';
+import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
-import { Button } from '../ui/button';
-import { AlertCircle, CheckCircle } from 'lucide-react';
-import { motion } from 'motion/react';
+import { GlassCard } from '../GlassCard';
+import { supabase } from '../../lib/supabase';
 
 interface ForgotPasswordProps {
   onBackToLogin: () => void;
@@ -13,32 +13,81 @@ interface ForgotPasswordProps {
 
 export function ForgotPassword({ onBackToLogin }: ForgotPasswordProps) {
   const [email, setEmail] = useState('');
-  const [message, setMessage] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [success, setSuccess] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isLoading) return;
+
     setIsLoading(true);
     setError(null);
-    setMessage(null);
 
     try {
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/reset-password`,
+        redirectTo: `${window.location.origin}/reset-password`
       });
 
       if (error) {
         setError(error.message);
       } else {
-        setMessage('Check your email for a password reset link.');
+        setSuccess(true);
       }
-    } catch (err: any) {
-      setError(err.message || 'An unexpected error occurred.');
+    } catch (err) {
+      setError('An unexpected error occurred. Please try again.');
     } finally {
       setIsLoading(false);
     }
   };
+
+  if (success) {
+    return (
+      <div className="min-h-screen flex items-center justify-center p-6">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+          className="w-full max-w-md"
+        >
+          <GlassCard className="p-8 space-y-6 text-center">
+            <motion.div
+              initial={{ scale: 0.8 }}
+              animate={{ scale: 1 }}
+              transition={{ duration: 0.5, delay: 0.1 }}
+              className="w-16 h-16 mx-auto bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center"
+            >
+              <CheckCircle className="w-8 h-8 text-green-600 dark:text-green-400" />
+            </motion.div>
+
+            <div>
+              <h1 className="text-2xl font-bold mb-2 text-gradient-primary">Check Your Email</h1>
+              <p className="text-muted-foreground">
+                We've sent a password reset link to <strong>{email}</strong>
+              </p>
+            </div>
+
+            <div className="space-y-4">
+              <p className="text-sm text-muted-foreground">
+                Click the link in the email to reset your password. The link will expire in 1 hour.
+              </p>
+              
+              <div className="pt-4">
+                <Button
+                  onClick={onBackToLogin}
+                  variant="outline"
+                  className="w-full"
+                >
+                  <ArrowLeft className="w-4 h-4 mr-2" />
+                  Back to Sign In
+                </Button>
+              </div>
+            </div>
+          </GlassCard>
+        </motion.div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex items-center justify-center p-6">
@@ -49,50 +98,100 @@ export function ForgotPassword({ onBackToLogin }: ForgotPasswordProps) {
         className="w-full max-w-md"
       >
         <GlassCard className="p-8 space-y-6">
-          <h2 className="text-xl font-bold text-center">Forgot Password</h2>
-
-          {(message || error) && (
-            <GlassCard
-              className={`p-4 ${
-                error
-                  ? 'border-red-200 bg-red-50/50 dark:bg-red-950/20'
-                  : 'border-green-200 bg-green-50/50 dark:bg-green-950/20'
-              }`}
+          {/* Header */}
+          <div className="text-center space-y-2">
+            <motion.div
+              initial={{ scale: 0.8 }}
+              animate={{ scale: 1 }}
+              transition={{ duration: 0.5, delay: 0.1 }}
             >
-              <div
-                className={`flex items-center gap-2 ${
-                  error ? 'text-red-600 dark:text-red-400' : 'text-green-600 dark:text-green-400'
-                }`}
-              >
-                {error ? <AlertCircle className="w-4 h-4 flex-shrink-0" /> : <CheckCircle className="w-4 h-4 flex-shrink-0" />}
-                <span className="text-sm">{error || message}</span>
-              </div>
-            </GlassCard>
+              <h1 className="text-gradient-primary text-2xl font-bold">Reset Password</h1>
+              <p className="text-muted-foreground">
+                Enter your email and we'll send you a reset link
+              </p>
+            </motion.div>
+          </div>
+
+          {/* Error Message */}
+          {error && (
+            <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              className="mb-4"
+            >
+              <GlassCard className="p-4 border-red-200 bg-red-50/50 dark:bg-red-950/20">
+                <div className="flex items-center gap-2 text-red-600 dark:text-red-400">
+                  <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                  <span className="text-sm">{error}</span>
+                </div>
+              </GlassCard>
+            </motion.div>
           )}
 
-          <form onSubmit={handleSubmit} className="space-y-4">
+          {/* Form */}
+          <motion.form
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.5, delay: 0.2 }}
+            onSubmit={handleSubmit}
+            className="space-y-4"
+          >
+            {/* Email Field */}
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
-              <Input
-                id="email"
-                type="email"
-                placeholder="Enter your email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-              />
+              <div className="relative">
+                <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
+                <Input
+                  id="email"
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="Enter your email address"
+                  className="pl-10 glass-card border-0"
+                  required
+                />
+              </div>
             </div>
 
-            <Button type="submit" disabled={isLoading} className="w-full">
-              {isLoading ? 'Sending...' : 'Send Reset Link'}
-            </Button>
-          </form>
+            {/* Submit Button */}
+            <motion.div
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+            >
+              <Button
+                type="submit"
+                disabled={isLoading}
+                className="w-full gradient-primary text-white border-0 glow-primary hover:glow-primary"
+              >
+                {isLoading ? (
+                  <motion.div
+                    animate={{ rotate: 360 }}
+                    transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                    className="w-4 h-4 border-2 border-white border-t-transparent rounded-full"
+                  />
+                ) : (
+                  'Send Reset Link'
+                )}
+              </Button>
+            </motion.div>
+          </motion.form>
 
-          <div className="text-center">
-            <button onClick={onBackToLogin} className="text-sm text-muted-foreground hover:text-primary-solid">
-              Back to login
+          {/* Back to Login */}
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.5, delay: 0.3 }}
+            className="text-center"
+          >
+            <button
+              onClick={onBackToLogin}
+              className="text-muted-foreground hover:text-foreground transition-colors inline-flex items-center gap-2"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              Back to Sign In
             </button>
-          </div>
+          </motion.div>
         </GlassCard>
       </motion.div>
     </div>

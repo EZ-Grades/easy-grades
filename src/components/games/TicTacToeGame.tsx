@@ -77,14 +77,8 @@ export function TicTacToeGame({ onComplete }: TicTacToeGameProps) {
       } else if (result.winner === 'O') {
         setAiScore(prev => prev + 1);
       }
-      
-      setTimeout(() => {
-        if (playerScore + aiScore >= 2) {
-          onComplete();
-        }
-      }, 2000);
     }
-  }, [board, playerScore, aiScore, gameActive, endGame]);
+  }, [board, gameActive, endGame]);
 
   // AI Move - using safe state management
   useEffect(() => {
@@ -212,6 +206,16 @@ export function TicTacToeGame({ onComplete }: TicTacToeGameProps) {
     setWinner(null);
     setWinningLine([]);
   };
+  
+  // Auto-start new game when winner is declared (after showing result briefly)
+  useEffect(() => {
+    if (winner) {
+      const timer = setTimeout(() => {
+        resetGame();
+      }, 3000); // Wait 3 seconds before auto-restarting
+      return () => clearTimeout(timer);
+    }
+  }, [winner]);
 
   const resetScores = () => {
     setPlayerScore(0);

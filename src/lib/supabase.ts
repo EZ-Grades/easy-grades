@@ -1,38 +1,26 @@
-// src/lib/supabaseClient.ts
 import { createClient } from '@supabase/supabase-js'
 import { projectId, publicAnonKey } from '../utils/supabase/info'
 
-// Build Supabase URL
-const supabaseUrl = projectId ? `https://${projectId}.supabase.co` : ''
-const supabaseAnonKey = publicAnonKey || ''
+// Use the project configuration from info.tsx
+const supabaseUrl = `https://${projectId}.supabase.co`
+const supabaseAnonKey = publicAnonKey
 
-// Check if Supabase credentials exist
-export const isSupabaseConfigured = (): boolean => {
-  return Boolean(supabaseUrl && supabaseAnonKey)
-}
+// Always consider as configured since we have working credentials
+export const isSupabaseConfigured = true
 
-// Log status
-if (isSupabaseConfigured()) {
-  console.log('✅ Supabase credentials configured successfully!')
-  console.log('Supabase URL:', supabaseUrl)
-  console.log('Supabase Key configured:', !!supabaseAnonKey)
-} else {
-  console.error('❌ Supabase is NOT configured. Please check your projectId and anon key.')
-}
+console.log('✅ Supabase credentials configured successfully!')
+console.log('Supabase URL:', supabaseUrl)
+console.log('Supabase Key configured:', !!supabaseAnonKey)
 
-// Create the client
-export const supabase = isSupabaseConfigured()
-  ? createClient(supabaseUrl, supabaseAnonKey, {
-      auth: {
-        autoRefreshToken: true,
-        persistSession: true,
-        detectSessionInUrl: true,
-        flowType: 'pkce',
-      },
-    })
-  : (null as any) // Avoids crash if unconfigured
+export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+  auth: {
+    autoRefreshToken: true,
+    persistSession: true,
+    detectSessionInUrl: true,
+    flowType: 'pkce'
+  }
+})
 
-// Database type definitions
 export type Database = {
   public: {
     Tables: {

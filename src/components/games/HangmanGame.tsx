@@ -247,11 +247,10 @@ export function HangmanGame({ onComplete }: HangmanGameProps) {
       if (newWrongGuesses >= maxWrongGuesses) {
         setGameStatus('lost');
         setStreak(0);
+        // Auto-restart after showing result
         setTimeout(() => {
-          if (gamesPlayed >= 3) {
-            onComplete();
-          }
-        }, 2500);
+          startNewRound();
+        }, 3000);
       }
     } else {
       // Check if word is complete
@@ -271,11 +270,10 @@ export function HangmanGame({ onComplete }: HangmanGameProps) {
           return newStreak;
         });
         
+        // Auto-restart after showing result
         setTimeout(() => {
-          if (gamesPlayed >= 3) {
-            onComplete();
-          }
-        }, 2500);
+          startNewRound();
+        }, 3000);
       }
     }
   };

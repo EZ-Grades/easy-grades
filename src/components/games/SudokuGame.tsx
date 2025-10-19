@@ -210,7 +210,10 @@ export function SudokuGame({ onComplete }: SudokuGameProps) {
       // Check if puzzle is complete
       if (isPuzzleComplete(newGrid) && newErrors.size === 0) {
         setIsComplete(true);
-        setTimeout(() => onComplete(), 2000);
+        // Auto-restart after showing result
+        setTimeout(() => {
+          resetGame();
+        }, 3000);
       }
     } catch (error) {
       console.error('Error in handleNumberInput:', error);
