@@ -252,13 +252,11 @@ export default function App() {
             />
             <div className="absolute inset-0 flex items-center justify-center">
               <div className="w-12 h-12 rounded-full glass-card flex items-center justify-center glow-primary">
-                  <div className="mb-8">
                       <img
                         src={Logo}
                         alt="App Logo"
                         className="w-20 h-20 rounded-full object-cover border-2 border-gray-700 shadow-md"
                       />
-                        </div>
               </div>
             </div>
           </div>
