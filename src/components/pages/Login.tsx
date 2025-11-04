@@ -118,8 +118,9 @@ export function Login({ onLogin, onGoogleLogin, onSwitchToSignup, onSignUp, load
                   <span className="text-sm">{error || success}</span>
                 </div>
                 {error?.includes('Invalid email or password') && (
-                  <div className="mt-2 text-xs text-muted-foreground border-t border-border/30 pt-2">
-                    <p>💡 Don't have an account yet? <button onClick={onSwitchToSignup} className="text-primary-solid hover:underline">Sign up here</button></p>
+                  <div className="mt-2 text-xs text-muted-foreground border-t border-border/30 pt-2 space-y-1">
+                    <p>💡 <strong>Don't have an account yet?</strong></p>
+                    <p>Click the <button onClick={onSwitchToSignup} className="text-primary-solid hover:underline cursor-pointer font-semibold">Sign up</button> button below to create an account first!</p>
                   </div>
                 )}
               </GlassCard>
@@ -168,7 +169,7 @@ export function Login({ onLogin, onGoogleLogin, onSwitchToSignup, onSignUp, load
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
                 >
                   {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
@@ -180,7 +181,7 @@ export function Login({ onLogin, onGoogleLogin, onSwitchToSignup, onSignUp, load
               <button
                 type="button"
                 onClick={() => setShowForgotPassword(true)}
-                className="text-sm text-muted-foreground hover:text-primary-solid transition-colors"
+                className="text-sm text-muted-foreground hover:text-primary-solid transition-colors cursor-pointer"
               >
                 Forgot password?
               </button>
@@ -280,7 +281,7 @@ export function Login({ onLogin, onGoogleLogin, onSwitchToSignup, onSignUp, load
               Don't have an account?{' '}
               <button
                 onClick={onSwitchToSignup}
-                className="text-gradient-primary hover:underline transition-all duration-200"
+                className="text-gradient-primary hover:underline transition-all duration-200 cursor-pointer"
               >
                 Sign up
               </button>

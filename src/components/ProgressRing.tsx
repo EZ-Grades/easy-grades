@@ -7,15 +7,17 @@ interface ProgressRingProps {
   className?: string;
   children?: React.ReactNode;
   gradient?: 'primary' | 'secondary' | 'highlight';
+  showBackground?: boolean;
 }
 
 export function ProgressRing({ 
   progress, 
-  size = 120, 
-  strokeWidth = 8, 
+  size = 160, 
+  strokeWidth = 6, 
   className = '',
   children,
-  gradient = 'primary'
+  gradient = 'primary',
+  showBackground = true
 }: ProgressRingProps) {
   const radius = (size - strokeWidth) / 2;
   const circumference = radius * 2 * Math.PI;
@@ -25,24 +27,18 @@ export function ProgressRing({
   const gradientId = `gradient-${gradient}-${Math.random().toString(36).substr(2, 9)}`;
 
   const gradientColors = {
-    primary: ['#7D4AE1', '#5B33C9'],
-    secondary: ['#3AB0A0', '#2B7D7D'],
-    highlight: ['#FFCB6B', '#E6A157']
-  };
-
-  // Dark mode adjustments
-  const darkGradientColors = {
-    primary: ['#5B6EE1', '#3B4FC9'],
-    secondary: ['#2ED7B0', '#1F9E8F'],
-    highlight: ['#FFD369', '#E6A157']
+    primary: ['#6BA5AF', '#5A9AA7'],
+    secondary: ['#2C4A6C', '#1E3A5F'],
+    highlight: ['#7CB3BD', '#6BA5AF']
   };
 
   return (
-    <div className={`relative inline-flex items-center justify-center ${className}`}>
+    <div className={`relative inline-flex items-center justify-center ${className}`} style={{ width: size, height: size }}>
       <svg
         width={size}
         height={size}
         className="transform -rotate-90"
+        style={{ display: 'block' }}
       >
         <defs>
           <linearGradient id={gradientId} x1="0%" y1="0%" x2="100%" y2="100%">
@@ -52,15 +48,17 @@ export function ProgressRing({
         </defs>
         
         {/* Background ring */}
-        <circle
-          cx={size / 2}
-          cy={size / 2}
-          r={radius}
-          stroke="currentColor"
-          strokeWidth={strokeWidth}
-          fill="transparent"
-          className="text-muted opacity-20"
-        />
+        {showBackground && (
+          <circle
+            cx={size / 2}
+            cy={size / 2}
+            r={radius}
+            stroke="currentColor"
+            strokeWidth={strokeWidth}
+            fill="transparent"
+            className="text-muted/20 dark:text-muted/10"
+          />
+        )}
         
         {/* Progress ring */}
         <motion.circle
@@ -70,16 +68,12 @@ export function ProgressRing({
           stroke={`url(#${gradientId})`}
           strokeWidth={strokeWidth}
           fill="transparent"
-          strokeLinecap="round"
+          strokeLinecap="butt"
           strokeDasharray={strokeDasharray}
           strokeDashoffset={strokeDashoffset}
           initial={{ strokeDashoffset: circumference }}
           animate={{ strokeDashoffset }}
-          transition={{ duration: 1, ease: "easeInOut" }}
-          className="drop-shadow-lg"
-          style={{
-            filter: `drop-shadow(0 0 8px ${gradientColors[gradient][0]}40)`
-          }}
+          transition={{ duration: 0.6, ease: "easeOut" }}
         />
       </svg>
       

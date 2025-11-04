@@ -62,15 +62,24 @@ export function MusicPlayer({ autoPlay = false, showQueue = true }: MusicPlayerP
       if (error) throw error;
       
       if (data && data.length > 0) {
-        setTracks(data);
-        setError(null);
+        // Filter out tracks with invalid URLs
+        const validTracks = data.filter(track => track.url && track.url.trim() !== '');
+        
+        if (validTracks.length > 0) {
+          setTracks(validTracks);
+          setError(null);
+          console.log(`Loaded ${validTracks.length} valid music tracks`);
+        } else {
+          setError('No valid music tracks available. Please upload tracks to Supabase Storage.');
+          console.warn('Found tracks in database but none have valid URLs');
+        }
       } else {
-        setError('No music tracks available');
+        setError('No music tracks in database. Please run SEED_MUSIC_TRACKS.sql');
+        console.warn('No music tracks found in database');
       }
     } catch (err: any) {
       console.error('Error loading tracks:', err);
-      setError('Failed to load music tracks');
-      toast.error('Failed to load music tracks');
+      setError('Failed to load music tracks from database');
     } finally {
       setLoading(false);
     }
@@ -100,18 +109,27 @@ export function MusicPlayer({ autoPlay = false, showQueue = true }: MusicPlayerP
     if (audioRef.current && currentTrack) {
       // Validate URL before setting
       if (!currentTrack.url || currentTrack.url.trim() === '') {
-        console.error('Invalid track URL:', currentTrack);
-        setError('Track URL is missing or invalid');
+        console.warn('Skipping track with invalid URL:', currentTrack.title);
+        // Skip to next track instead of showing error
+        if (tracks.length > 1) {
+          const nextIndex = (currentTrackIndex + 1) % tracks.length;
+          setCurrentTrackIndex(nextIndex);
+        } else {
+          setError('No valid tracks available');
+        }
         return;
       }
       
+      // Reset audio state before changing source
+      audioRef.current.pause();
+      audioRef.current.currentTime = 0;
       audioRef.current.src = currentTrack.url;
       audioRef.current.volume = volume / 100;
       
       // Load playback state from database
       loadPlaybackState();
     }
-  }, [currentTrack]);
+  }, [currentTrack, currentTrackIndex]);
 
   // Auto-play if enabled
   useEffect(() => {
@@ -233,28 +251,23 @@ export function MusicPlayer({ autoPlay = false, showQueue = true }: MusicPlayerP
     const audio = e.target as HTMLAudioElement;
     const error = audio.error;
     
-    let errorMessage = 'Error loading audio track';
-    
     if (error) {
       switch (error.code) {
         case MediaError.MEDIA_ERR_ABORTED:
-          errorMessage = 'Audio playback aborted';
-          break;
+          // Don't show error for user-initiated aborts
+          return;
         case MediaError.MEDIA_ERR_NETWORK:
-          errorMessage = 'Network error loading audio';
-          break;
         case MediaError.MEDIA_ERR_DECODE:
-          errorMessage = 'Audio file could not be decoded';
-          break;
         case MediaError.MEDIA_ERR_SRC_NOT_SUPPORTED:
-          errorMessage = 'Audio format not supported or source not available';
-          console.error('Invalid audio source:', currentTrack?.url);
-          break;
+          // Silently skip to next track if available
+          console.warn('Invalid audio source for track:', currentTrack?.title);
+          if (tracks.length > 1) {
+            nextTrack();
+          }
+          return;
       }
     }
     
-    console.error('Audio error:', errorMessage, error);
-    toast.error(errorMessage);
     setIsPlaying(false);
   };
 
@@ -271,13 +284,21 @@ export function MusicPlayer({ autoPlay = false, showQueue = true }: MusicPlayerP
   };
 
   const playTrack = async () => {
-    if (!audioRef.current) return;
+    if (!audioRef.current || !currentTrack) return;
+    
+    // Check if track has valid URL
+    if (!currentTrack.url || currentTrack.url.trim() === '') {
+      console.warn('Track has no URL, skipping to next');
+      if (tracks.length > 1) {
+        playNextTrack();
+      }
+      return;
+    }
     
     // Check if source is valid
     if (!audioRef.current.src || audioRef.current.src === window.location.href) {
-      console.error('No valid audio source');
-      toast.error('No audio source available');
-      return;
+      console.warn('No valid audio source, attempting to set source');
+      audioRef.current.src = currentTrack.url;
     }
 
     try {
@@ -285,15 +306,15 @@ export function MusicPlayer({ autoPlay = false, showQueue = true }: MusicPlayerP
       setIsPlaying(true);
       startProgressTracking();
     } catch (err: any) {
-      console.error('Error playing track:', err);
+      console.warn('Error playing track:', err.name);
       
-      // Provide specific error messages
-      if (err.name === 'NotSupportedError') {
-        toast.error('Audio format not supported');
-      } else if (err.name === 'NotAllowedError') {
-        toast.error('Playback blocked - please interact with the page first');
-      } else {
-        toast.error('Failed to play track');
+      // Silently skip to next track for audio errors
+      if (err.name === 'NotSupportedError' || err.name === 'NotAllowedError') {
+        setIsPlaying(false);
+        // Try next track if available
+        if (tracks.length > 1) {
+          setTimeout(() => playNextTrack(), 500);
+        }
       }
     }
   };
@@ -423,7 +444,10 @@ export function MusicPlayer({ autoPlay = false, showQueue = true }: MusicPlayerP
       <Card className="glassmorphism border-0 h-full">
         <CardContent className="flex flex-col items-center justify-center h-full min-h-[400px] space-y-4">
           <Music className="w-12 h-12 text-muted-foreground" />
-          <p className="text-muted-foreground">{error || 'No tracks available'}</p>
+          <p className="text-muted-foreground text-center">{error || 'No tracks available'}</p>
+          <p className="text-xs text-muted-foreground text-center max-w-md">
+            Music tracks need to be seeded in the database. Run the SEED_MUSIC_TRACKS.sql file in your Supabase SQL editor.
+          </p>
           <Button onClick={loadTracks} variant="outline">
             Retry
           </Button>

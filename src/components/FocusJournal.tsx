@@ -737,9 +737,11 @@ function JournalContent({
               value={text}
               onChange={handleTextChange}
               placeholder="Write your thoughts, goals, and reflections here...&#10;&#10;✨ Express yourself freely&#10;💭 Add stickers for decoration&#10;🎨 Make it uniquely yours"
-              className={`absolute inset-4 min-h-[calc(100%-2rem)] bg-transparent border-none resize-none focus:ring-0 ${embedded ? 'text-sm' : 'text-base'} leading-relaxed`}
+              className={`absolute inset-4 min-h-[calc(100%-2rem)] bg-transparent border-none resize-none focus:ring-0 ${embedded ? 'text-sm' : 'text-base'} leading-relaxed overflow-hidden`}
               style={{ 
-                zIndex: 1
+                zIndex: 1,
+                wordWrap: 'break-word',
+                overflowWrap: 'break-word'
               }}
             />
 

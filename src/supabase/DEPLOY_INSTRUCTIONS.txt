@@ -1,0 +1,129 @@
+================================================================================
+EZ GRADES DATABASE DEPLOYMENT - SIMPLE 4-STEP GUIDE
+================================================================================
+
+STEP 1: DROP OLD TABLES (Clean Slate)
+------------------------------------------------------
+1. Open Supabase Dashboard → SQL Editor
+2. Copy entire content of: DROP_ALL_TABLES.sql
+3. Paste and click "Run"
+4. Wait for: "✅ All tables and types dropped successfully"
+
+STEP 2: CREATE NEW SCHEMA (Main Deployment)
+------------------------------------------------------
+1. In SQL Editor, copy entire content of: UNIFIED_SCHEMA.sql
+2. Paste and click "Run"
+3. Wait 10-15 seconds for completion
+4. Look for: "✅ EZ GRADES DATABASE SCHEMA DEPLOYED SUCCESSFULLY"
+5. Should show: "📊 Total tables created: 44"
+
+STEP 3: VERIFY DEPLOYMENT (Check Everything Works)
+------------------------------------------------------
+1. In SQL Editor, copy entire content of: VERIFY_TABLES.sql
+2. Paste and click "Run"
+3. You should see all tables marked with ✅
+4. Look for: "🎉 SUCCESS! All tables are present!"
+5. If any tables show ❌, re-run UNIFIED_SCHEMA.sql
+
+STEP 4: CREATE AUTO-PROFILE TRIGGER (CRITICAL!)
+------------------------------------------------------
+1. In SQL Editor, copy entire content of: AUTO_PROFILE_TRIGGER.sql
+2. Paste and click "Run"
+3. This creates:
+   - Automatic profile creation when user signs up
+   - Auto-creates preferences and stats
+   - No manual profile creation needed!
+4. Look for: "✅ AUTO PROFILE TRIGGER CREATED"
+
+STEP 5: ADD SAMPLE CONTENT (Recommended)
+------------------------------------------------------
+1. In SQL Editor, copy entire content of: seed_data.sql
+2. Paste and click "Run"
+3. This adds:
+   - 12 music tracks
+   - 14 ambient sounds
+   - 24 inspirational quotes/tips
+   - 10 courses
+   - 6 certifications
+   - 30+ achievements
+4. Look for: "✅ SEED DATA INSERTED SUCCESSFULLY"
+
+DONE! TEST YOUR APP
+------------------------------------------------------
+1. Open EZ Grades app
+2. Sign up or log in
+3. Try these features:
+   ✓ Create a focus session
+   ✓ Add a task
+   ✓ Play music from Music Player
+   ✓ Browse Study Hub courses
+   ✓ Check achievements in settings
+5. Everything should work perfectly!
+
+================================================================================
+TROUBLESHOOTING
+================================================================================
+
+Issue: "relation already exists" errors
+Fix: Run DROP_ALL_TABLES.sql first, then UNIFIED_SCHEMA.sql
+
+Issue: Still showing 39 tables after deployment
+Fix: Check Supabase logs for errors. One table might have failed.
+
+Issue: "Failed to fetch" errors in app
+Fix: Make sure your backend server is running (edge function)
+
+Issue: "No profiles table" error
+Fix: Make sure UNIFIED_SCHEMA.sql completed without errors
+
+================================================================================
+TABLE COUNT BREAKDOWN (44 Tables Total)
+================================================================================
+
+Core User Tables (5):
+  • profiles, user_preferences, tasks, note_categories, notes
+
+Focus Sessions (13):
+  • focus_sessions (parent table)
+  • focus_sessions_2025_01 through focus_sessions_2025_12 (monthly partitions)
+
+Stats & Calendar (5):
+  • daily_stats, weekly_goals, journal_entries
+  • custom_backgrounds, calendar_events
+
+Media Content (5):
+  • tracks, ambient_sounds, inspirations
+  • user_sound_settings, playback_state
+
+Study Hub / AI (8):
+  • courses, certifications, exam_questions
+  • flashcard_decks, flashcards, course_enrollments
+  • practice_sessions, chat_history
+
+Social Features (7):
+  • achievements, user_achievements
+  • study_rooms, room_participants, room_messages
+  • canvas_sessions, user_stats
+
+Backend Storage (1):
+  • kv_store_7ba2faf7
+
+Total: 44 tables ✅
+
+================================================================================
+FILES YOU NEED
+================================================================================
+
+✅ DROP_ALL_TABLES.sql         - Step 1: Clean slate (drops everything)
+✅ UNIFIED_SCHEMA.sql           - Step 2: Creates all 44 tables
+✅ VERIFY_TABLES.sql            - Step 3: Confirms deployment success
+🔥 AUTO_PROFILE_TRIGGER.sql    - Step 4: Auto-creates profiles (CRITICAL!)
+✅ seed_data.sql                - Step 5: Adds sample content
+📖 DEPLOY_INSTRUCTIONS.txt      - This guide
+
+================================================================================
+DONE!
+================================================================================
+
+After following these steps, your database should be fully deployed with 40+ tables.
+Your EZ Grades app should work perfectly!

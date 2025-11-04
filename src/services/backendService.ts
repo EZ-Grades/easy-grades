@@ -11,32 +11,10 @@ type NoteUpdate = Database['public']['Tables']['notes']['Update'];
 type FocusSession = Database['public']['Tables']['focus_sessions']['Row'];
 type FocusSessionInsert = Database['public']['Tables']['focus_sessions']['Insert'];
 type FocusSessionUpdate = Database['public']['Tables']['focus_sessions']['Update'];
-
-// Mock types for tables that don't exist yet
-interface MockTrack {
-  id: string;
-  name: string;
-  url: string;
-  mood: string;
-  duration?: number;
-  created_at: string;
-}
-
-interface MockAmbientSound {
-  id: string;
-  name: string;
-  file_url: string;
-  category: string;
-  volume: number;
-}
-
-interface MockAmbienceMode {
-  id: string;
-  name: string;
-  description: string;
-  sounds: string[];
-  background_color: string;
-}
+type DailyStat = Database['public']['Tables']['daily_stats']['Row'];
+type WeeklyGoal = Database['public']['Tables']['weekly_goals']['Row'];
+type Track = Database['public']['Tables']['tracks']['Row'];
+type AmbientSound = Database['public']['Tables']['ambient_sounds']['Row'];
 
 // ==========================================
 // BREAK MODE - TRACKS SERVICE
@@ -46,11 +24,12 @@ export const tracksService = {
   /**
    * Fetch all tracks with optional ordering and filtering
    */
-  async getAllTracks(orderBy: 'name' | 'mood' | 'created_at' = 'name', mood?: string) {
+  async getAllTracks(orderBy: 'title' | 'mood' | 'created_at' = 'title', mood?: string) {
     try {
       let query = supabase
         .from('tracks')
-        .select('*');
+        .select('*')
+        .eq('is_active', true); // Only active tracks
 
       if (mood) {
         query = query.eq('mood', mood);
@@ -61,44 +40,14 @@ export const tracksService = {
       const { data, error } = await query;
       
       if (error) {
-        console.debug('Tracks table not available:', error.message);
-        // Return mock data when table doesn't exist
-        const mockTracks: MockTrack[] = [
-          {
-            id: '1',
-            name: 'Lofi Hip Hop',
-            url: '/music/lofi.mp3',
-            mood: 'focus',
-            duration: 180,
-            created_at: new Date().toISOString()
-          },
-          {
-            id: '2',
-            name: 'Nature Sounds',
-            url: '/music/nature.mp3',
-            mood: 'relaxing',
-            duration: 240,
-            created_at: new Date().toISOString()
-          }
-        ];
-        const filteredTracks = mood ? mockTracks.filter(track => track.mood === mood) : mockTracks;
-        return { data: filteredTracks, error: null };
+        console.error('Error fetching tracks:', error);
+        return { data: null, error };
       }
       
       return { data, error: null };
     } catch (error) {
-      console.debug('Tracks table not available:', error);
-      const mockTracks: MockTrack[] = [
-        {
-          id: '1',
-          name: 'Lofi Hip Hop',
-          url: '/music/lofi.mp3',
-          mood: 'focus',
-          duration: 180,
-          created_at: new Date().toISOString()
-        }
-      ];
-      return { data: mockTracks, error: null };
+      console.error('Error in getAllTracks:', error);
+      return { data: null, error: error as Error };
     }
   },
 
@@ -110,6 +59,7 @@ export const tracksService = {
       .from('tracks')
       .select('*')
       .eq('id', id)
+      .eq('is_active', true)
       .single();
     
     if (error) {
@@ -121,17 +71,18 @@ export const tracksService = {
   },
 
   /**
-   * Get track by name
+   * Get tracks by mood
    */
-  async getTrackByName(name: string) {
+  async getTracksByMood(mood: string) {
     const { data, error } = await supabase
       .from('tracks')
       .select('*')
-      .eq('name', name)
-      .single();
+      .eq('mood', mood)
+      .eq('is_active', true)
+      .order('title');
     
     if (error) {
-      console.error('Error fetching track:', error);
+      console.error('Error fetching tracks by mood:', error);
       return { data: null, error };
     }
     
@@ -139,118 +90,161 @@ export const tracksService = {
   },
 
   /**
-   * Record track play in history
+   * Get tracks by genre
    */
-  async recordPlay(userId: string, trackId: string) {
+  async getTracksByGenre(genre: string) {
     const { data, error } = await supabase
-      .from('user_play_history')
-      .insert({
-        user_id: userId,
-        track_id: trackId
-      });
+      .from('tracks')
+      .select('*')
+      .eq('genre', genre)
+      .eq('is_active', true)
+      .order('title');
     
     if (error) {
-      console.error('Error recording play:', error);
-      return { success: false, error };
-    }
-    
-    return { success: true, data };
-  },
-
-  /**
-   * Get user's play history
-   */
-  async getPlayHistory(userId: string, limit = 50) {
-    const { data, error } = await supabase
-      .from('user_play_history')
-      .select(`
-        *,
-        tracks (*)
-      `)
-      .eq('user_id', userId)
-      .order('played_at', { ascending: false })
-      .limit(limit);
-    
-    if (error) {
-      console.error('Error fetching play history:', error);
+      console.error('Error fetching tracks by genre:', error);
       return { data: null, error };
     }
     
     return { data, error: null };
-  }
+  },
 };
 
 // ==========================================
-// VOLUME SETTINGS SERVICE
+// PLAYBACK STATE SERVICE
 // ==========================================
 
-export const volumeService = {
+export const playbackService = {
   /**
-   * Get user volume settings
+   * Get user's playback state
    */
-  async getUserVolumeSettings(userId: string) {
+  async getPlaybackState(userId: string) {
     const { data, error } = await supabase
-      .from('user_volume_settings')
+      .from('playback_state')
       .select('*')
       .eq('user_id', userId)
       .single();
     
-    if (error && error.code !== 'PGRST116') { // Not found error is OK
-      console.error('Error fetching volume settings:', error);
+    if (error && error.code !== 'PGRST116') { // PGRST116 = no rows
+      console.error('Error fetching playback state:', error);
       return { data: null, error };
-    }
-    
-    // Return default settings if not found
-    if (!data) {
-      return { 
-        data: { 
-          user_id: userId, 
-          master_volume: 70, 
-          ambient_volume: 50 
-        }, 
-        error: null 
-      };
     }
     
     return { data, error: null };
   },
 
   /**
-   * Update user volume settings
+   * Update playback state
    */
-  async updateVolumeSettings(userId: string, settings: Partial<Database['public']['Tables']['user_volume_settings']['Update']>) {
+  async updatePlaybackState(userId: string, state: Partial<Database['public']['Tables']['playback_state']['Update']>) {
     const { data, error } = await supabase
-      .from('user_volume_settings')
+      .from('playback_state')
       .upsert({
         user_id: userId,
-        ...settings
+        ...state,
+        updated_at: new Date().toISOString()
       })
       .select()
       .single();
     
     if (error) {
-      console.error('Error updating volume settings:', error);
-      return { success: false, error };
+      console.error('Error updating playback state:', error);
+      return { data: null, error };
     }
     
-    return { success: true, data };
-  }
+    return { data, error: null };
+  },
 };
 
 // ==========================================
-// DASHBOARD - TASKS SERVICE
+// AMBIENT SOUNDS SERVICE
+// ==========================================
+
+export const ambientSoundsService = {
+  /**
+   * Get all ambient sounds
+   */
+  async getAllAmbientSounds() {
+    const { data, error } = await supabase
+      .from('ambient_sounds')
+      .select('*')
+      .eq('is_active', true)
+      .order('name');
+    
+    if (error) {
+      console.error('Error fetching ambient sounds:', error);
+      return { data: null, error };
+    }
+    
+    return { data, error: null };
+  },
+
+  /**
+   * Get user's ambient sound settings
+   */
+  async getUserSoundSettings(userId: string) {
+    const { data, error } = await supabase
+      .from('user_sound_settings')
+      .select(`
+        *,
+        ambient_sounds (*)
+      `)
+      .eq('user_id', userId);
+    
+    if (error) {
+      console.error('Error fetching user sound settings:', error);
+      return { data: null, error };
+    }
+    
+    return { data, error: null };
+  },
+
+  /**
+   * Update user sound setting
+   */
+  async updateSoundSetting(userId: string, ambientSoundId: string, enabled: boolean, volume: number) {
+    const { data, error } = await supabase
+      .from('user_sound_settings')
+      .upsert({
+        user_id: userId,
+        ambient_sound_id: ambientSoundId,
+        enabled,
+        volume,
+        updated_at: new Date().toISOString()
+      })
+      .select()
+      .single();
+    
+    if (error) {
+      console.error('Error updating sound setting:', error);
+      return { data: null, error };
+    }
+    
+    return { data, error: null };
+  },
+};
+
+// ==========================================
+// TASKS SERVICE
 // ==========================================
 
 export const tasksService = {
   /**
    * Get all tasks for a user
    */
-  async getUserTasks(userId: string, orderBy: 'created_at' | 'title' = 'created_at') {
-    const { data, error } = await supabase
+  async getUserTasks(userId: string, includeCompleted: boolean = true) {
+    let query = supabase
       .from('tasks')
       .select('*')
       .eq('user_id', userId)
-      .order(orderBy, { ascending: orderBy === 'title' });
+      .is('deleted_at', null); // Exclude soft deleted
+
+    if (!includeCompleted) {
+      query = query.eq('completed', false);
+    }
+
+    query = query.order('created_at', { ascending: false });
+
+    const { data, error } = await query;
     
     if (error) {
       console.error('Error fetching tasks:', error);
@@ -263,48 +257,56 @@ export const tasksService = {
   /**
    * Add a new task
    */
-  async addTask(userId: string, title: string) {
+  async addTask(userId: string, task: Omit<TaskInsert, 'user_id' | 'id'>) {
     const { data, error } = await supabase
       .from('tasks')
       .insert({
         user_id: userId,
-        title,
-        completed: false
+        ...task
       })
       .select()
       .single();
     
     if (error) {
       console.error('Error adding task:', error);
-      return { success: false, error };
+      return { data: null, error };
     }
     
-    return { success: true, data };
+    return { data, error: null };
   },
 
   /**
-   * Update task completion status
+   * Update task
    */
-  async updateTaskCompletion(taskId: string, completed: boolean) {
+  async updateTask(taskId: string, updates: TaskUpdate) {
     const { data, error } = await supabase
       .from('tasks')
-      .update({ completed })
+      .update({
+        ...updates,
+        updated_at: new Date().toISOString()
+      })
       .eq('id', taskId)
       .select()
       .single();
     
     if (error) {
       console.error('Error updating task:', error);
-      return { success: false, error };
+      return { data: null, error };
     }
     
-    return { success: true, data };
+    return { data, error: null };
   },
 
   /**
-   * Update task title
+   * Toggle task completion
    */
-  async updateTask(taskId: string, updates: TaskUpdate) {
+  async toggleTaskCompletion(taskId: string, completed: boolean) {
+    const updates: TaskUpdate = {
+      completed,
+      completed_at: completed ? new Date().toISOString() : null,
+      updated_at: new Date().toISOString()
+    };
+
     const { data, error } = await supabase
       .from('tasks')
       .update(updates)
@@ -313,68 +315,54 @@ export const tasksService = {
       .single();
     
     if (error) {
-      console.error('Error updating task:', error);
-      return { success: false, error };
-    }
-    
-    return { success: true, data };
-  },
-
-  /**
-   * Delete a task
-   */
-  async deleteTask(taskId: string) {
-    const { error } = await supabase
-      .from('tasks')
-      .delete()
-      .eq('id', taskId);
-    
-    if (error) {
-      console.error('Error deleting task:', error);
-      return { success: false, error };
-    }
-    
-    return { success: true };
-  },
-
-  /**
-   * Get task statistics for a user
-   */
-  async getTaskStats(userId: string) {
-    const { data, error } = await supabase
-      .from('tasks')
-      .select('completed')
-      .eq('user_id', userId);
-    
-    if (error) {
-      console.error('Error fetching task stats:', error);
+      console.error('Error toggling task completion:', error);
       return { data: null, error };
     }
     
-    const total = data.length;
-    const completed = data.filter(task => task.completed).length;
+    return { data, error: null };
+  },
+
+  /**
+   * Soft delete a task
+   */
+  async deleteTask(taskId: string) {
+    const { data, error } = await supabase
+      .from('tasks')
+      .update({
+        deleted_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', taskId)
+      .select()
+      .single();
     
-    return { 
-      data: { total, completed, percentage: total > 0 ? (completed / total) * 100 : 0 }, 
-      error: null 
-    };
-  }
+    if (error) {
+      console.error('Error deleting task:', error);
+      return { data: null, error };
+    }
+    
+    return { data, error: null };
+  },
 };
 
 // ==========================================
-// DASHBOARD - NOTES SERVICE
+// NOTES SERVICE
 // ==========================================
 
 export const notesService = {
   /**
    * Get all notes for a user
    */
-  async getUserNotes(userId: string, orderBy: 'created_at' | 'title' = 'created_at') {
+  async getUserNotes(userId: string) {
     const { data, error } = await supabase
       .from('notes')
-      .select('*')
+      .select(`
+        *,
+        note_categories (*)
+      `)
       .eq('user_id', userId)
-      .order(orderBy, { ascending: false });
+      .is('deleted_at', null)
+      .order('created_at', { ascending: false });
     
     if (error) {
       console.error('Error fetching notes:', error);
@@ -387,349 +375,167 @@ export const notesService = {
   /**
    * Add a new note
    */
-  async addNote(userId: string, title: string, content: string = '') {
+  async addNote(userId: string, note: Omit<NoteInsert, 'user_id' | 'id'>) {
     const { data, error } = await supabase
       .from('notes')
       .insert({
         user_id: userId,
-        title,
-        content
+        ...note
       })
       .select()
       .single();
     
     if (error) {
       console.error('Error adding note:', error);
-      return { success: false, error };
+      return { data: null, error };
     }
     
-    return { success: true, data };
+    return { data, error: null };
   },
 
   /**
-   * Update a note
+   * Update note
    */
   async updateNote(noteId: string, updates: NoteUpdate) {
     const { data, error } = await supabase
       .from('notes')
-      .update(updates)
+      .update({
+        ...updates,
+        updated_at: new Date().toISOString()
+      })
       .eq('id', noteId)
       .select()
       .single();
     
     if (error) {
       console.error('Error updating note:', error);
-      return { success: false, error };
+      return { data: null, error };
     }
     
-    return { success: true, data };
+    return { data, error: null };
   },
 
   /**
-   * Delete a note
+   * Soft delete a note
    */
   async deleteNote(noteId: string) {
-    const { error } = await supabase
+    const { data, error } = await supabase
       .from('notes')
-      .delete()
-      .eq('id', noteId);
+      .update({
+        deleted_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', noteId)
+      .select()
+      .single();
     
     if (error) {
       console.error('Error deleting note:', error);
-      return { success: false, error };
-    }
-    
-    return { success: true };
-  }
-};
-
-// ==========================================
-// DASHBOARD - WEEKLY GOALS SERVICE
-// ==========================================
-
-export const weeklyGoalsService = {
-  /**
-   * Get weekly goal for a user (current week)
-   */
-  async getCurrentWeeklyGoal(userId: string) {
-    const today = new Date();
-    const startOfWeek = new Date(today.setDate(today.getDate() - today.getDay()));
-    const weekStart = startOfWeek.toISOString().split('T')[0];
-    
-    const { data, error } = await supabase
-      .from('weekly_goals')
-      .select('*')
-      .eq('user_id', userId)
-      .eq('week_start_date', weekStart)
-      .single();
-    
-    if (error && error.code !== 'PGRST116') {
-      console.error('Error fetching weekly goal:', error);
       return { data: null, error };
-    }
-    
-    // Create default goal if not found
-    if (!data) {
-      const { data: newGoal, error: createError } = await supabase
-        .from('weekly_goals')
-        .insert({
-          user_id: userId,
-          hours_goal: 40,
-          progress_hours: 0,
-          week_start_date: weekStart
-        })
-        .select()
-        .single();
-      
-      if (createError) {
-        console.error('Error creating weekly goal:', createError);
-        return { data: null, error: createError };
-      }
-      
-      return { data: newGoal, error: null };
     }
     
     return { data, error: null };
   },
 
   /**
-   * Update weekly goal progress
+   * Get note categories for a user
    */
-  async updateProgress(userId: string, progressHours: number) {
-    const today = new Date();
-    const startOfWeek = new Date(today.setDate(today.getDate() - today.getDay()));
-    const weekStart = startOfWeek.toISOString().split('T')[0];
-    
+  async getUserNoteCategories(userId: string) {
     const { data, error } = await supabase
-      .from('weekly_goals')
-      .update({ progress_hours: progressHours })
-      .eq('user_id', userId)
-      .eq('week_start_date', weekStart)
-      .select()
-      .single();
-    
-    if (error) {
-      console.error('Error updating progress:', error);
-      return { success: false, error };
-    }
-    
-    return { success: true, data };
-  },
-
-  /**
-   * Set new weekly goal
-   */
-  async setWeeklyGoal(userId: string, hoursGoal: number) {
-    const today = new Date();
-    const startOfWeek = new Date(today.setDate(today.getDate() - today.getDay()));
-    const weekStart = startOfWeek.toISOString().split('T')[0];
-    
-    const { data, error } = await supabase
-      .from('weekly_goals')
-      .upsert({
-        user_id: userId,
-        hours_goal: hoursGoal,
-        week_start_date: weekStart
-      })
-      .select()
-      .single();
-    
-    if (error) {
-      console.error('Error setting weekly goal:', error);
-      return { success: false, error };
-    }
-    
-    return { success: true, data };
-  }
-};
-
-// ==========================================
-// DASHBOARD - DAILY SESSIONS SERVICE
-// ==========================================
-
-export const dailySessionsService = {
-  /**
-   * Get or create today's session record
-   */
-  async getTodaySession(userId: string) {
-    const today = new Date().toISOString().split('T')[0];
-    
-    const { data, error } = await supabase
-      .from('daily_sessions')
+      .from('note_categories')
       .select('*')
       .eq('user_id', userId)
-      .eq('session_date', today)
-      .single();
+      .order('name');
     
-    if (error && error.code !== 'PGRST116') {
-      console.error('Error fetching daily session:', error);
+    if (error) {
+      console.error('Error fetching note categories:', error);
       return { data: null, error };
-    }
-    
-    if (!data) {
-      const { data: newSession, error: createError } = await supabase
-        .from('daily_sessions')
-        .insert({
-          user_id: userId,
-          session_date: today,
-          completed_sessions: 0,
-          total_minutes: 0
-        })
-        .select()
-        .single();
-      
-      if (createError) {
-        console.error('Error creating daily session:', createError);
-        return { data: null, error: createError };
-      }
-      
-      return { data: newSession, error: null };
     }
     
     return { data, error: null };
   },
-
-  /**
-   * Update daily session stats
-   */
-  async updateDailyStats(userId: string, completedSessions: number, totalMinutes: number) {
-    const today = new Date().toISOString().split('T')[0];
-    
-    const { data, error } = await supabase
-      .from('daily_sessions')
-      .upsert({
-        user_id: userId,
-        session_date: today,
-        completed_sessions: completedSessions,
-        total_minutes: totalMinutes
-      })
-      .select()
-      .single();
-    
-    if (error) {
-      console.error('Error updating daily stats:', error);
-      return { success: false, error };
-    }
-    
-    return { success: true, data };
-  },
-
-  /**
-   * Get weekly session stats
-   */
-  async getWeeklyStats(userId: string) {
-    const today = new Date();
-    const startOfWeek = new Date(today.setDate(today.getDate() - today.getDay()));
-    const weekStart = startOfWeek.toISOString().split('T')[0];
-    
-    const { data, error } = await supabase
-      .from('daily_sessions')
-      .select('*')
-      .eq('user_id', userId)
-      .gte('session_date', weekStart)
-      .order('session_date');
-    
-    if (error) {
-      console.error('Error fetching weekly stats:', error);
-      return { data: null, error };
-    }
-    
-    const totalSessions = data.reduce((sum, day) => sum + (day.completed_sessions || 0), 0);
-    const totalMinutes = data.reduce((sum, day) => sum + (day.total_minutes || 0), 0);
-    
-    return { 
-      data: { 
-        sessions: data, 
-        totalSessions, 
-        totalMinutes,
-        totalHours: Math.round(totalMinutes / 60 * 100) / 100
-      }, 
-      error: null 
-    };
-  }
 };
 
 // ==========================================
-// FOCUS MODE - FOCUS SESSIONS SERVICE
+// FOCUS SESSIONS SERVICE
 // ==========================================
 
 export const focusSessionsService = {
   /**
    * Start a new focus session
    */
-  async startSession(userId: string, durationMinutes: number, ambienceMode?: string, fullscreen: boolean = false) {
+  async startSession(userId: string, durationMinutes: number, ambienceMode?: string) {
     const { data, error } = await supabase
       .from('focus_sessions')
       .insert({
         user_id: userId,
+        planned_duration: durationMinutes,
         duration_minutes: durationMinutes,
-        start_time: new Date().toISOString(),
-        ambience_mode: ambienceMode,
-        fullscreen,
-        completed: false
+        status: 'active',
+        focus_mode: ambienceMode || 'pomodoro',
+        start_time: new Date().toISOString()
       })
       .select()
       .single();
     
     if (error) {
       console.error('Error starting focus session:', error);
-      return { success: false, error };
+      return { data: null, error };
     }
     
-    return { success: true, data };
+    return { data, error: null };
   },
 
   /**
    * Update session progress
    */
-  async updateSessionProgress(sessionId: string, completedMinutes: number) {
+  async updateSession(sessionId: string, updates: FocusSessionUpdate) {
     const { data, error } = await supabase
       .from('focus_sessions')
-      .update({ completed_minutes: completedMinutes })
+      .update({
+        ...updates,
+        updated_at: new Date().toISOString()
+      })
       .eq('id', sessionId)
       .select()
       .single();
     
     if (error) {
-      console.error('Error updating session progress:', error);
-      return { success: false, error };
+      console.error('Error updating session:', error);
+      return { data: null, error };
     }
     
-    return { success: true, data };
+    return { data, error: null };
   },
 
   /**
-   * End a focus session
+   * Complete a session
    */
-  async endSession(sessionId: string, completedMinutes?: number) {
-    const updates: any = {
-      end_time: new Date().toISOString(),
-      completed: true
-    };
-    
-    if (completedMinutes !== undefined) {
-      updates.completed_minutes = completedMinutes;
-    }
-    
+  async completeSession(sessionId: string, completedMinutes: number) {
     const { data, error } = await supabase
       .from('focus_sessions')
-      .update(updates)
+      .update({
+        completed_minutes: completedMinutes,
+        status: 'completed',
+        completed_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      })
       .eq('id', sessionId)
       .select()
       .single();
     
     if (error) {
-      console.error('Error ending session:', error);
-      return { success: false, error };
+      console.error('Error completing session:', error);
+      return { data: null, error };
     }
     
-    return { success: true, data };
+    return { data, error: null };
   },
 
   /**
-   * Get user's focus sessions
+   * Get user's recent sessions
    */
-  async getUserSessions(userId: string, limit = 50) {
+  async getUserSessions(userId: string, limit: number = 10) {
     const { data, error } = await supabase
       .from('focus_sessions')
       .select('*')
@@ -738,7 +544,7 @@ export const focusSessionsService = {
       .limit(limit);
     
     if (error) {
-      console.error('Error fetching focus sessions:', error);
+      console.error('Error fetching sessions:', error);
       return { data: null, error };
     }
     
@@ -746,412 +552,383 @@ export const focusSessionsService = {
   },
 
   /**
-   * Get focus session statistics
+   * Get session statistics for a user
    */
   async getSessionStats(userId: string) {
+    try {
+      // Get all completed sessions
+      const { data: sessions, error } = await supabase
+        .from('focus_sessions')
+        .select('*')
+        .eq('user_id', userId)
+        .eq('status', 'completed')
+        .order('start_time', { ascending: false });
+      
+      if (error) {
+        console.error('Error fetching session stats:', error);
+        return { data: null, error };
+      }
+
+      if (!sessions || sessions.length === 0) {
+        return {
+          data: {
+            totalSessions: 0,
+            totalMinutes: 0,
+            currentStreak: 0,
+            longestStreak: 0,
+            averageSessionLength: 0,
+            todaysSessions: 0,
+            thisWeekSessions: 0,
+          },
+          error: null
+        };
+      }
+
+      // Calculate total sessions and minutes
+      const totalSessions = sessions.length;
+      const totalMinutes = sessions.reduce((sum, s) => sum + (s.completed_minutes || 0), 0);
+      const averageSessionLength = totalSessions > 0 ? Math.round(totalMinutes / totalSessions) : 0;
+
+      // Calculate today's sessions
+      const today = new Date().toISOString().split('T')[0];
+      const todaysSessions = sessions.filter(s => 
+        s.start_time && s.start_time.startsWith(today)
+      ).length;
+
+      // Calculate this week's sessions
+      const oneWeekAgo = new Date();
+      oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+      const thisWeekSessions = sessions.filter(s => 
+        s.start_time && new Date(s.start_time) >= oneWeekAgo
+      ).length;
+
+      // Calculate streak
+      const sessionDates = [...new Set(
+        sessions
+          .filter(s => s.start_time)
+          .map(s => s.start_time!.split('T')[0])
+      )].sort().reverse();
+
+      let currentStreak = 0;
+      let longestStreak = 0;
+      let tempStreak = 0;
+      
+      if (sessionDates.length > 0) {
+        const today = new Date();
+        const yesterday = new Date(today);
+        yesterday.setDate(yesterday.getDate() - 1);
+        
+        const todayStr = today.toISOString().split('T')[0];
+        const yesterdayStr = yesterday.toISOString().split('T')[0];
+
+        // Check if streak is still active (today or yesterday)
+        if (sessionDates[0] === todayStr || sessionDates[0] === yesterdayStr) {
+          let expectedDate = new Date(sessionDates[0]);
+          
+          for (const dateStr of sessionDates) {
+            const sessionDate = new Date(dateStr);
+            const expectedStr = expectedDate.toISOString().split('T')[0];
+            
+            if (dateStr === expectedStr) {
+              currentStreak++;
+              tempStreak++;
+              longestStreak = Math.max(longestStreak, tempStreak);
+              expectedDate.setDate(expectedDate.getDate() - 1);
+            } else {
+              tempStreak = 1;
+              expectedDate = new Date(dateStr);
+              expectedDate.setDate(expectedDate.getDate() - 1);
+            }
+          }
+        } else {
+          // Calculate longest streak even if current streak is broken
+          let expectedDate = new Date(sessionDates[0]);
+          
+          for (const dateStr of sessionDates) {
+            const sessionDate = new Date(dateStr);
+            const expectedStr = expectedDate.toISOString().split('T')[0];
+            
+            if (dateStr === expectedStr) {
+              tempStreak++;
+              longestStreak = Math.max(longestStreak, tempStreak);
+              expectedDate.setDate(expectedDate.getDate() - 1);
+            } else {
+              tempStreak = 1;
+              expectedDate = new Date(dateStr);
+              expectedDate.setDate(expectedDate.getDate() - 1);
+            }
+          }
+        }
+      }
+
+      return {
+        data: {
+          totalSessions,
+          totalMinutes,
+          currentStreak,
+          longestStreak,
+          averageSessionLength,
+          todaysSessions,
+          thisWeekSessions,
+        },
+        error: null
+      };
+    } catch (error) {
+      console.error('Error calculating session stats:', error);
+      return { data: null, error: error as Error };
+    }
+  },
+};
+
+// ==========================================
+// DAILY STATS SERVICE (renamed from daily_sessions)
+// ==========================================
+
+export const dailyStatsService = {
+  /**
+   * Get daily stats for a specific date
+   */
+  async getDailyStats(userId: string, date: string) {
     const { data, error } = await supabase
-      .from('focus_sessions')
+      .from('daily_stats')
       .select('*')
       .eq('user_id', userId)
-      .eq('completed', true);
+      .eq('stat_date', date)
+      .single();
     
-    if (error) {
-      console.error('Error fetching session stats:', error);
+    if (error && error.code !== 'PGRST116') {
+      console.error('Error fetching daily stats:', error);
       return { data: null, error };
     }
     
-    const totalSessions = data.length;
-    const totalFocusTime = data.reduce((sum, session) => sum + (session.completed_minutes || 0), 0);
-    const fullscreenSessions = data.filter(session => session.fullscreen).length;
-    
-    // Calculate current streak
-    const today = new Date();
-    let currentStreak = 0;
-    
-    // Sort sessions by date (most recent first)
-    const sessionsByDate = data.sort((a, b) => 
-      new Date(b.start_time).getTime() - new Date(a.start_time).getTime()
-    );
-    
-    // Group by date and check for consecutive days
-    const sessionDates = [...new Set(sessionsByDate.map(session => 
-      new Date(session.start_time).toDateString()
-    ))];
-    
-    for (let i = 0; i < sessionDates.length; i++) {
-      const sessionDate = new Date(sessionDates[i]);
-      const daysDiff = Math.floor((today.getTime() - sessionDate.getTime()) / (1000 * 60 * 60 * 24));
-      
-      if (daysDiff === i) {
-        currentStreak++;
-      } else {
-        break;
-      }
-    }
-    
-    return { 
-      data: { 
-        totalSessions, 
-        totalFocusTime, 
-        fullscreenSessions, 
-        currentStreak,
-        totalHours: Math.round(totalFocusTime / 60 * 100) / 100
-      }, 
-      error: null 
-    };
-  }
-};
-
-// ==========================================
-// FOCUS MODE - AMBIENT SOUNDS SERVICE
-// ==========================================
-
-export const ambientSoundsService = {
-  /**
-   * Get all ambient sounds
-   */
-  async getAllAmbientSounds() {
-    try {
-      const { data, error } = await supabase
-        .from('ambient_sounds')
-        .select('*')
-        .order('name');
-      
-      if (error) {
-        console.debug('Ambient sounds table not available:', error.message);
-        // Return mock data when table doesn't exist
-        const mockSounds: MockAmbientSound[] = [
-          {
-            id: '1',
-            name: 'Rain Sounds',
-            file_url: '/sounds/rain.mp3',
-            category: 'nature',
-            volume: 70
-          },
-          {
-            id: '2',
-            name: 'Forest Ambience',
-            file_url: '/sounds/forest.mp3',
-            category: 'nature',
-            volume: 60
-          },
-          {
-            id: '3',
-            name: 'Coffee Shop',
-            file_url: '/sounds/cafe.mp3',
-            category: 'urban',
-            volume: 50
-          }
-        ];
-        return { data: mockSounds, error: null };
-      }
-      
-      return { data, error: null };
-    } catch (error) {
-      console.debug('Ambient sounds table not available:', error);
-      // Return mock data when table doesn't exist
-      const mockSounds: MockAmbientSound[] = [
-        {
-          id: '1',
-          name: 'Rain Sounds',
-          file_url: '/sounds/rain.mp3',
-          category: 'nature',
-          volume: 70
-        },
-        {
-          id: '2',
-          name: 'Forest Ambience',
-          file_url: '/sounds/forest.mp3',
-          category: 'nature',
-          volume: 60
-        }
-      ];
-      return { data: mockSounds, error: null };
-    }
+    return { data, error: null };
   },
 
   /**
-   * Get user's ambient sound settings
+   * Update or create daily stats
    */
-  async getUserAmbientSettings(userId: string) {
-    try {
-      const { data, error } = await supabase
-        .from('user_ambient_settings')
-        .select(`
-          *,
-          ambient_sounds (*)
-        `)
-        .eq('user_id', userId);
-      
-      if (error) {
-        console.debug('User ambient settings table not available:', error.message);
-        // Return empty array when table doesn't exist
-        return { data: [], error: null };
-      }
-      
-      return { data, error: null };
-    } catch (error) {
-      console.debug('User ambient settings table not available:', error);
-      // Return empty array when table doesn't exist
-      return { data: [], error: null };
-    }
-  },
-
-  /**
-   * Toggle ambient sound on/off
-   */
-  async toggleAmbientSound(userId: string, ambientSoundId: string, enabled: boolean, volume: number = 50) {
-    try {
-      const { data, error } = await supabase
-        .from('user_ambient_settings')
-        .upsert({
-          user_id: userId,
-          ambient_sound_id: ambientSoundId,
-          enabled,
-          volume
-        })
-        .select()
-        .single();
-      
-      if (error) {
-        console.debug('User ambient settings table not available:', error.message);
-        // Return mock success when table doesn't exist
-        return { 
-          success: true, 
-          data: { 
-            user_id: userId, 
-            ambient_sound_id: ambientSoundId, 
-            enabled, 
-            volume 
-          } 
-        };
-      }
-      
-      return { success: true, data };
-    } catch (error) {
-      console.debug('User ambient settings table not available:', error);
-      // Return mock success when table doesn't exist
-      return { 
-        success: true, 
-        data: { 
-          user_id: userId, 
-          ambient_sound_id: ambientSoundId, 
-          enabled, 
-          volume 
-        } 
-      };
-    }
-  },
-
-  /**
-   * Update user ambient setting (alias for toggleAmbientSound)
-   */
-  async updateUserAmbientSetting(userId: string, ambientSoundId: string, enabled: boolean, volume: number) {
-    return this.toggleAmbientSound(userId, ambientSoundId, enabled, volume);
-  },
-
-  /**
-   * Adjust ambient sound volume
-   */
-  async adjustVolume(userId: string, ambientSoundId: string, volume: number) {
-    try {
-      const { data, error } = await supabase
-        .from('user_ambient_settings')
-        .update({ volume })
-        .eq('user_id', userId)
-        .eq('ambient_sound_id', ambientSoundId)
-        .select()
-        .single();
-      
-      if (error) {
-        console.error('Error adjusting volume:', error);
-        return { success: false, error };
-      }
-      
-      return { success: true, data };
-    } catch (error) {
-      console.error('User ambient settings table not available:', error);
-      return { success: false, error };
-    }
-  }
-};
-
-// ==========================================
-// FOCUS MODE - DISTRACTION BLOCKER SERVICE
-// ==========================================
-
-export const distractionBlockerService = {
-  /**
-   * Get user settings
-   */
-  async getUserSettings(userId: string) {
+  async updateDailyStats(userId: string, date: string, stats: Partial<Database['public']['Tables']['daily_stats']['Update']>) {
     const { data, error } = await supabase
-      .from('user_settings')
+      .from('daily_stats')
+      .upsert({
+        user_id: userId,
+        stat_date: date,
+        ...stats,
+        updated_at: new Date().toISOString()
+      })
+      .select()
+      .single();
+    
+    if (error) {
+      console.error('Error updating daily stats:', error);
+      return { data: null, error };
+    }
+    
+    return { data, error: null };
+  },
+
+  /**
+   * Get stats for a date range
+   */
+  async getStatsRange(userId: string, startDate: string, endDate: string) {
+    const { data, error } = await supabase
+      .from('daily_stats')
+      .select('*')
+      .eq('user_id', userId)
+      .gte('stat_date', startDate)
+      .lte('stat_date', endDate)
+      .order('stat_date', { ascending: true });
+    
+    if (error) {
+      console.error('Error fetching stats range:', error);
+      return { data: null, error };
+    }
+    
+    return { data, error: null };
+  },
+};
+
+// ==========================================
+// WEEKLY GOALS SERVICE
+// ==========================================
+
+export const weeklyGoalsService = {
+  /**
+   * Get weekly goal
+   */
+  async getWeeklyGoal(userId: string, weekStartDate: string) {
+    const { data, error } = await supabase
+      .from('weekly_goals')
+      .select('*')
+      .eq('user_id', userId)
+      .eq('week_start_date', weekStartDate)
+      .single();
+    
+    if (error && error.code !== 'PGRST116') {
+      console.error('Error fetching weekly goal:', error);
+      return { data: null, error };
+    }
+    
+    return { data, error: null };
+  },
+
+  /**
+   * Create or update weekly goal
+   */
+  async upsertWeeklyGoal(userId: string, weekStartDate: string, targetHours: number, achievedHours?: number) {
+    const { data, error } = await supabase
+      .from('weekly_goals')
+      .upsert({
+        user_id: userId,
+        week_start_date: weekStartDate,
+        target_hours: targetHours,
+        achieved_hours: achievedHours || 0,
+        is_achieved: achievedHours ? achievedHours >= targetHours : false,
+        updated_at: new Date().toISOString()
+      })
+      .select()
+      .single();
+    
+    if (error) {
+      console.error('Error upserting weekly goal:', error);
+      return { data: null, error };
+    }
+    
+    return { data, error: null };
+  },
+
+  /**
+   * Update goal progress
+   */
+  async updateGoalProgress(userId: string, weekStartDate: string, achievedHours: number) {
+    // First get the goal to check target
+    const { data: goal } = await this.getWeeklyGoal(userId, weekStartDate);
+    
+    const { data, error } = await supabase
+      .from('weekly_goals')
+      .update({
+        achieved_hours: achievedHours,
+        is_achieved: goal ? achievedHours >= goal.target_hours : false,
+        updated_at: new Date().toISOString()
+      })
+      .eq('user_id', userId)
+      .eq('week_start_date', weekStartDate)
+      .select()
+      .single();
+    
+    if (error) {
+      console.error('Error updating goal progress:', error);
+      return { data: null, error };
+    }
+    
+    return { data, error: null };
+  },
+};
+
+// ==========================================
+// USER PREFERENCES SERVICE
+// ==========================================
+
+export const userPreferencesService = {
+  /**
+   * Get user preferences
+   */
+  async getUserPreferences(userId: string) {
+    const { data, error } = await supabase
+      .from('user_preferences')
       .select('*')
       .eq('user_id', userId)
       .single();
     
     if (error && error.code !== 'PGRST116') {
-      console.error('Error fetching user settings:', error);
+      console.error('Error fetching user preferences:', error);
       return { data: null, error };
-    }
-    
-    // Return default settings if not found
-    if (!data) {
-      return { 
-        data: { 
-          user_id: userId, 
-          distraction_block_enabled: false, 
-          show_blocked_sites: true 
-        }, 
-        error: null 
-      };
     }
     
     return { data, error: null };
   },
 
   /**
-   * Update user settings
+   * Update user preferences
    */
-  async updateSettings(userId: string, settings: Partial<UserSettingsUpdate>) {
+  async updateUserPreferences(userId: string, preferences: Partial<Database['public']['Tables']['user_preferences']['Update']>) {
     const { data, error } = await supabase
-      .from('user_settings')
+      .from('user_preferences')
       .upsert({
         user_id: userId,
-        ...settings
+        ...preferences,
+        updated_at: new Date().toISOString()
       })
       .select()
       .single();
     
     if (error) {
-      console.error('Error updating user settings:', error);
-      return { success: false, error };
-    }
-    
-    return { success: true, data };
-  },
-
-  /**
-   * Get blocked sites for user
-   */
-  async getBlockedSites(userId: string) {
-    const { data, error } = await supabase
-      .from('blocked_sites')
-      .select('*')
-      .eq('user_id', userId)
-      .order('created_at', { ascending: false });
-    
-    if (error) {
-      console.error('Error fetching blocked sites:', error);
+      console.error('Error updating user preferences:', error);
       return { data: null, error };
     }
     
     return { data, error: null };
   },
-
-  /**
-   * Add blocked site
-   */
-  async addBlockedSite(userId: string, url: string) {
-    const { data, error } = await supabase
-      .from('blocked_sites')
-      .insert({
-        user_id: userId,
-        url
-      })
-      .select()
-      .single();
-    
-    if (error) {
-      console.error('Error adding blocked site:', error);
-      return { success: false, error };
-    }
-    
-    return { success: true, data };
-  },
-
-  /**
-   * Remove blocked site
-   */
-  async removeBlockedSite(siteId: string) {
-    const { error } = await supabase
-      .from('blocked_sites')
-      .delete()
-      .eq('id', siteId);
-    
-    if (error) {
-      console.error('Error removing blocked site:', error);
-      return { success: false, error };
-    }
-    
-    return { success: true };
-  }
 };
 
 // ==========================================
-// FOCUS MODE - AMBIENCE MODES SERVICE
+// USER STATS SERVICE
 // ==========================================
 
-export const ambienceModesService = {
+export const userStatsService = {
   /**
-   * Get all ambience modes
+   * Get user stats
    */
-  async getAllAmbienceModes() {
-    try {
-      const { data, error } = await supabase
-        .from('ambience_modes')
-        .select('*')
-        .order('name');
-      
-      if (error) {
-        console.warn('Ambience modes table not available:', error.message);
-        return { data: null, error };
-      }
-      
-      return { data, error: null };
-    } catch (error) {
-      console.warn('Ambience modes table not available:', error);
+  async getUserStats(userId: string) {
+    const { data, error } = await supabase
+      .from('user_stats')
+      .select('*')
+      .eq('user_id', userId)
+      .single();
+    
+    if (error && error.code !== 'PGRST116') {
+      console.error('Error fetching user stats:', error);
       return { data: null, error };
     }
+    
+    return { data, error: null };
   },
 
   /**
-   * Get ambience mode by ID
+   * Update user stats
    */
-  async getAmbienceModeById(id: string) {
-    try {
-      const { data, error } = await supabase
-        .from('ambience_modes')
-        .select('*')
-        .eq('id', id)
-        .single();
-      
-      if (error) {
-        console.error('Error fetching ambience mode:', error);
-        return { data: null, error };
-      }
-      
-      return { data, error: null };
-    } catch (error) {
-      console.error('Ambience modes table not available:', error);
+  async updateUserStats(userId: string, stats: Partial<Database['public']['Tables']['user_stats']['Update']>) {
+    const { data, error } = await supabase
+      .from('user_stats')
+      .update({
+        ...stats,
+        updated_at: new Date().toISOString()
+      })
+      .eq('user_id', userId)
+      .select()
+      .single();
+    
+    if (error) {
+      console.error('Error updating user stats:', error);
       return { data: null, error };
     }
-  }
+    
+    return { data, error: null };
+  },
 };
 
 // Export all services
 export const backendService = {
   tracks: tracksService,
-  volume: volumeService,
+  playback: playbackService,
+  ambientSounds: ambientSoundsService,
   tasks: tasksService,
   notes: notesService,
-  weeklyGoals: weeklyGoalsService,
-  dailySessions: dailySessionsService,
   focusSessions: focusSessionsService,
-  ambientSounds: ambientSoundsService,
-  distractionBlocker: distractionBlockerService,
-  ambienceModes: ambienceModesService
+  dailyStats: dailyStatsService,
+  weeklyGoals: weeklyGoalsService,
+  userPreferences: userPreferencesService,
+  userStats: userStatsService,
 };
 
 export default backendService;

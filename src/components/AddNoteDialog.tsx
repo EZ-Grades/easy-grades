@@ -37,19 +37,23 @@ export function AddNoteDialog({ userId, onNoteAdded }: AddNoteDialogProps) {
     try {
       if (userId) {
         // LOGGED-IN USER - Save to backend
-        const result = await backendService.notes.addNote(
+        const { data, error } = await backendService.notes.addNote(
           userId,
-          noteTitle.trim(),
-          noteContent.trim()
+          {
+            title: noteTitle.trim(),
+            content: noteContent.trim()
+          }
         );
 
-        if (result.success && result.data) {
+        if (error) {
+          throw new Error(error.message || 'Failed to save note');
+        }
+
+        if (data) {
           toast.success('Note saved! 📝');
-          onNoteAdded?.(result.data);
+          onNoteAdded?.(data);
           resetForm();
           setOpen(false);
-        } else {
-          throw new Error(result.error?.message || 'Failed to save note');
         }
       } else {
         // GUEST USER - Create local note

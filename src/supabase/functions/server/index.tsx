@@ -41,6 +41,7 @@ app.post("/make-server-4faddd75/auth/signup", async (c) => {
       return c.json({ error: "Missing required fields" }, 400);
     }
 
+    // Create user in Supabase Auth
     const { data, error } = await supabase.auth.admin.createUser({
       email,
       password,
@@ -55,6 +56,73 @@ app.post("/make-server-4faddd75/auth/signup", async (c) => {
     if (error) {
       console.error('Signup error:', error);
       return c.json({ error: error.message }, 400);
+    }
+
+    if (!data.user) {
+      return c.json({ error: "Failed to create user" }, 500);
+    }
+
+    // Create profile in profiles table
+    try {
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .insert({
+          id: data.user.id,
+          email: data.user.email,
+          full_name: fullName,
+          username: fullName.split(' ')[0] || 'Scholar',
+          role: 'user',
+          theme: 'system'
+        });
+
+      if (profileError) {
+        console.error('Profile creation error:', profileError);
+        // Don't fail the signup if profile creation fails
+        // The user can still use the app with auth data
+      } else {
+        console.log('✅ Profile created for user:', data.user.email);
+      }
+
+      // Create user preferences
+      const { error: prefsError } = await supabase
+        .from('user_preferences')
+        .insert({
+          user_id: data.user.id,
+          default_focus_duration: 25,
+          default_break_duration: 5,
+          study_goal_hours: 2
+        });
+
+      if (prefsError) {
+        console.error('User preferences creation error:', prefsError);
+        // Don't fail the signup if preferences creation fails
+      } else {
+        console.log('✅ User preferences created for:', data.user.email);
+      }
+
+      // Create user stats
+      const { error: statsError } = await supabase
+        .from('user_stats')
+        .insert({
+          user_id: data.user.id,
+          total_study_hours: 0,
+          total_sessions: 0,
+          total_tasks_completed: 0,
+          current_streak_days: 0,
+          longest_streak_days: 0,
+          total_points: 0,
+          level: 1
+        });
+
+      if (statsError) {
+        console.error('User stats creation error:', statsError);
+        // Don't fail the signup
+      } else {
+        console.log('✅ User stats created for:', data.user.email);
+      }
+    } catch (dbError) {
+      console.error('Database setup error:', dbError);
+      // Don't fail signup - user can still authenticate
     }
 
     return c.json({ 

@@ -126,7 +126,7 @@ export function SignUp({ onSignUp, onGoogleSignUp, onSwitchToLogin, loading }: S
                 </div>
                 {error?.includes('Account already exists') && (
                   <div className="mt-2 text-xs text-muted-foreground border-t border-border/30 pt-2">
-                    <p>💡 Already have an account? <button onClick={onSwitchToLogin} className="text-primary-solid hover:underline">Sign in here</button></p>
+                    <p>💡 Already have an account? <button onClick={onSwitchToLogin} className="text-primary-solid hover:underline cursor-pointer">Sign in here</button></p>
                   </div>
                 )}
               </GlassCard>
@@ -192,7 +192,7 @@ export function SignUp({ onSignUp, onGoogleSignUp, onSwitchToLogin, loading }: S
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
                 >
                   {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
@@ -238,7 +238,7 @@ export function SignUp({ onSignUp, onGoogleSignUp, onSwitchToLogin, loading }: S
                 <button
                   type="button"
                   onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
                 >
                   {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
@@ -345,7 +345,7 @@ export function SignUp({ onSignUp, onGoogleSignUp, onSwitchToLogin, loading }: S
               Already have an account?{' '}
               <button
                 onClick={onSwitchToLogin}
-                className="text-gradient-primary hover:underline transition-all duration-200"
+                className="text-gradient-primary hover:underline transition-all duration-200 cursor-pointer"
               >
                 Sign in
               </button>

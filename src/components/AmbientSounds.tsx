@@ -1,8 +1,16 @@
 import { useState, useEffect, useRef } from 'react';
 import { motion } from 'motion/react';
-import { Volume2, VolumeX, Play, Pause } from 'lucide-react';
+import { 
+  Volume2, 
+  Cloud, 
+  Waves, 
+  TreePine, 
+  CloudLightning, 
+  Flame, 
+  Radio,
+  Wind
+} from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
-import { Button } from './ui/button';
 import { Slider } from './ui/slider';
 import { toast } from 'sonner@2.0.3';
 import {
@@ -13,6 +21,7 @@ import {
   AmbientSound,
   UserAmbientPreference,
 } from '../services/ambientSoundsService';
+import { soundGenerator } from '../services/soundGenerator';
 
 interface AmbientSoundsProps {
   className?: string;
@@ -20,16 +29,17 @@ interface AmbientSoundsProps {
 
 interface SoundPlayer {
   sound: AmbientSound;
-  audio: HTMLAudioElement;
+  audio: HTMLAudioElement | null; // Null for generated sounds
   volume: number;
   isEnabled: boolean;
+  isGenerated: boolean; // True if using Web Audio API
 }
 
 export function AmbientSounds({ className }: AmbientSoundsProps) {
   const [sounds, setSounds] = useState<AmbientSound[]>([]);
   const [preferences, setPreferences] = useState<Map<string, UserAmbientPreference>>(new Map());
   const [loading, setLoading] = useState(true);
-  const [masterMuted, setMasterMuted] = useState(false);
+  const [activeSoundId, setActiveSoundId] = useState<string | null>(null);
 
   const playersRef = useRef<Map<string, SoundPlayer>>(new Map());
 
@@ -40,8 +50,12 @@ export function AmbientSounds({ className }: AmbientSoundsProps) {
     return () => {
       // Cleanup: stop all sounds when component unmounts
       playersRef.current.forEach(player => {
-        player.audio.pause();
-        player.audio.src = '';
+        if (player.isGenerated) {
+          soundGenerator.stopSound(player.sound.name);
+        } else if (player.audio) {
+          player.audio.pause();
+          player.audio.src = '';
+        }
       });
       playersRef.current.clear();
     };
@@ -79,7 +93,7 @@ export function AmbientSounds({ className }: AmbientSoundsProps) {
       }
     } catch (err: any) {
       console.error('Error loading ambient sounds:', err);
-      toast.error('Failed to load ambient sounds');
+      // Don't show toast for missing audio files - they're optional
     } finally {
       setLoading(false);
     }
@@ -88,14 +102,37 @@ export function AmbientSounds({ className }: AmbientSoundsProps) {
   const initializePlayers = (soundsList: AmbientSound[]) => {
     soundsList.forEach(sound => {
       if (!playersRef.current.has(sound.id)) {
+        // Check if this sound should use Web Audio API generation
+        const generatedSounds = ['whitenoise', 'brownnoise', 'pinknoise', 'rain', 'ocean', 'forest', 'fireplace', 'thunder'];
+        const isGenerated = generatedSounds.includes(sound.name);
+        
+        if (isGenerated) {
+          // Use Web Audio API - no HTMLAudioElement needed
+          playersRef.current.set(sound.id, {
+            sound,
+            audio: null,
+            volume: sound.default_volume || 50,
+            isEnabled: false,
+            isGenerated: true,
+          });
+          return;
+        }
+        
+        // For non-generated sounds, check for valid URLs
+        if (!sound.audio_url || sound.audio_url.trim() === '' || 
+            sound.audio_url === 'placeholder' || 
+            !sound.audio_url.startsWith('http')) {
+          console.log(`Skipping sound with placeholder URL: ${sound.display_name}`);
+          return;
+        }
+        
         const audio = new Audio(sound.audio_url);
         audio.loop = true;
         audio.volume = sound.default_volume / 100;
         
-        // Add error handling
+        // Add silent error handling
         audio.addEventListener('error', () => {
-          console.error(`Error loading sound: ${sound.display_name}`);
-          toast.error(`Failed to load: ${sound.display_name}`);
+          console.log(`Could not load audio for: ${sound.display_name}`);
         });
 
         playersRef.current.set(sound.id, {
@@ -103,42 +140,104 @@ export function AmbientSounds({ className }: AmbientSoundsProps) {
           audio,
           volume: sound.default_volume,
           isEnabled: false,
+          isGenerated: false,
         });
       }
     });
   };
 
-  const toggleSound = async (soundId: string, enabled: boolean) => {
+  const toggleSound = async (soundId: string) => {
     const player = playersRef.current.get(soundId);
     if (!player) return;
 
     try {
-      if (enabled && !masterMuted) {
-        await player.audio.play();
-        player.isEnabled = true;
-      } else {
-        player.audio.pause();
+      // If this sound is already playing, stop it
+      if (activeSoundId === soundId) {
+        if (player.isGenerated) {
+          soundGenerator.stopSound(player.sound.name);
+        } else if (player.audio) {
+          player.audio.pause();
+        }
         player.isEnabled = false;
+        setActiveSoundId(null);
+        
+        // Update in database
+        await updateAmbientPreference(soundId, { is_enabled: false });
+        
+        // Update local state
+        const pref = preferences.get(soundId);
+        if (pref) {
+          setPreferences(new Map(preferences.set(soundId, { ...pref, is_enabled: false })));
+        }
+        return;
       }
 
+      // Stop the currently active sound
+      if (activeSoundId) {
+        const activePlayer = playersRef.current.get(activeSoundId);
+        if (activePlayer) {
+          if (activePlayer.isGenerated) {
+            soundGenerator.stopSound(activePlayer.sound.name);
+          } else if (activePlayer.audio) {
+            activePlayer.audio.pause();
+          }
+          activePlayer.isEnabled = false;
+          
+          // Update previous sound in database
+          await updateAmbientPreference(activeSoundId, { is_enabled: false });
+          
+          // Update local state
+          const activePref = preferences.get(activeSoundId);
+          if (activePref) {
+            setPreferences(new Map(preferences.set(activeSoundId, { ...activePref, is_enabled: false })));
+          }
+        }
+      }
+
+      // Start the new sound
+      if (player.isGenerated) {
+        try {
+          await soundGenerator.playSound(player.sound.name, player.volume / 100);
+          player.isEnabled = true;
+        } catch (genErr: any) {
+          console.warn('Could not generate sound:', player.sound.display_name, genErr.message);
+          toast.error(`Could not play ${player.sound.display_name}`);
+          return;
+        }
+      } else {
+        if (!player.audio || !player.audio.src || player.audio.src === window.location.href) {
+          console.warn('Invalid audio source for sound:', player.sound.display_name);
+          return;
+        }
+        
+        try {
+          await player.audio.play();
+          player.isEnabled = true;
+        } catch (playErr: any) {
+          console.warn('Could not play sound:', player.sound.display_name, playErr.name);
+          return;
+        }
+      }
+
+      setActiveSoundId(soundId);
+
       // Update in database
-      await updateAmbientPreference(soundId, { is_enabled: enabled });
+      await updateAmbientPreference(soundId, { is_enabled: true });
 
       // Update local state
       const pref = preferences.get(soundId);
       if (pref) {
-        setPreferences(new Map(preferences.set(soundId, { ...pref, is_enabled: enabled })));
+        setPreferences(new Map(preferences.set(soundId, { ...pref, is_enabled: true })));
       } else {
         const newPref: Partial<UserAmbientPreference> = {
           ambient_sound_id: soundId,
           volume: player.volume,
-          is_enabled: enabled,
+          is_enabled: true,
         };
         setPreferences(new Map(preferences.set(soundId, newPref as UserAmbientPreference)));
       }
     } catch (err: any) {
       console.error('Error toggling sound:', err);
-      toast.error('Failed to toggle sound');
     }
   };
 
@@ -147,7 +246,12 @@ export function AmbientSounds({ className }: AmbientSoundsProps) {
     if (!player) return;
 
     player.volume = volume;
-    player.audio.volume = masterMuted ? 0 : volume / 100;
+    
+    if (player.isGenerated) {
+      soundGenerator.setVolume(player.sound.name, volume / 100);
+    } else if (player.audio) {
+      player.audio.volume = volume / 100;
+    }
   };
 
   const handleVolumeChange = async (soundId: string, newVolume: number[]) => {
@@ -168,41 +272,7 @@ export function AmbientSounds({ className }: AmbientSoundsProps) {
     }
   };
 
-  const toggleMasterMute = () => {
-    const newMuted = !masterMuted;
-    setMasterMuted(newMuted);
 
-    playersRef.current.forEach(player => {
-      if (player.isEnabled) {
-        player.audio.volume = newMuted ? 0 : player.volume / 100;
-      }
-    });
-
-    toast.success(newMuted ? 'All sounds muted' : 'Sounds unmuted');
-  };
-
-  const disableAll = async () => {
-    try {
-      playersRef.current.forEach(player => {
-        player.audio.pause();
-        player.isEnabled = false;
-      });
-
-      await disableAllAmbientSounds();
-
-      // Update local state
-      const newPrefs = new Map(preferences);
-      newPrefs.forEach((pref, key) => {
-        newPrefs.set(key, { ...pref, is_enabled: false });
-      });
-      setPreferences(newPrefs);
-
-      toast.success('All sounds disabled');
-    } catch (err: any) {
-      console.error('Error disabling all sounds:', err);
-      toast.error('Failed to disable all sounds');
-    }
-  };
 
   const isEnabled = (soundId: string) => {
     return preferences.get(soundId)?.is_enabled || false;
@@ -212,9 +282,26 @@ export function AmbientSounds({ className }: AmbientSoundsProps) {
     return preferences.get(soundId)?.volume || playersRef.current.get(soundId)?.volume || 50;
   };
 
+  // Map sound names to minimalist icons
+  const getSoundIcon = (soundName: string) => {
+    const iconMap: Record<string, any> = {
+      rain: Cloud,
+      ocean: Waves,
+      forest: TreePine,
+      thunder: CloudLightning,
+      fireplace: Flame,
+      whitenoise: Radio,
+      brownnoise: Radio,
+      pinknoise: Radio,
+    };
+    
+    const IconComponent = iconMap[soundName] || Wind;
+    return <IconComponent className="w-4 h-4" />;
+  };
+
   if (loading) {
     return (
-      <Card className={`glassmorphism border-0 ${className}`}>
+      <Card className={`glass-card-enhanced border-0 ${className}`}>
         <CardContent className="py-8 flex items-center justify-center">
           <p className="text-muted-foreground">Loading ambient sounds...</p>
         </CardContent>
@@ -223,101 +310,81 @@ export function AmbientSounds({ className }: AmbientSoundsProps) {
   }
 
   return (
-    <Card className={`glassmorphism border-0 ${className}`}>
+    <Card className={`glass-card-enhanced border-0 ${className}`}>
       <CardHeader>
-        <CardTitle className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Volume2 className="w-5 h-5" />
-            Ambient Sounds
-          </div>
-          <div className="flex items-center gap-2">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={toggleMasterMute}
-            >
-              {masterMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={disableAll}
-            >
-              Stop All
-            </Button>
-          </div>
+        <CardTitle className="flex items-center gap-2">
+          <Volume2 className="w-5 h-5" />
+          Ambient Sounds
         </CardTitle>
       </CardHeader>
-      <CardContent className="space-y-4">
+      <CardContent className="space-y-2">
         {sounds.length === 0 ? (
-          <p className="text-center text-muted-foreground py-4">
-            No ambient sounds available
-          </p>
+          <div className="text-center py-8 px-4">
+            <div className="text-4xl mb-4">🎵</div>
+            <p className="text-sm text-muted-foreground mb-4">
+              Ambient sounds are not configured yet
+            </p>
+            <div className="text-xs text-muted-foreground bg-muted/30 p-4 rounded-lg space-y-2 text-left">
+              <p className="font-medium mb-2">To enable ambient sounds:</p>
+              <ol className="list-decimal list-inside space-y-1">
+                <li>Upload audio files to Supabase Storage</li>
+                <li>Run the SEED_AMBIENT_SOUNDS.sql script</li>
+                <li>Update URLs in the database to point to your audio files</li>
+              </ol>
+              <p className="mt-3 pt-3 border-t border-border">
+                💡 For now, you can use visual ambiences and background environments in fullscreen focus mode
+              </p>
+            </div>
+          </div>
         ) : (
-          sounds.map((sound, index) => (
-            <motion.div
-              key={sound.id}
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: index * 0.05 }}
-              className="space-y-2"
-            >
-              <div className="flex items-center justify-between">
+          <>
+            {sounds.map((sound, index) => (
+              <motion.button
+                key={sound.id}
+                initial={{ opacity: 0, y: 5 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: index * 0.03 }}
+                onClick={() => toggleSound(sound.id)}
+                className={`w-full flex items-center justify-between p-3 rounded-lg transition-all duration-300 ${
+                  activeSoundId === sound.id
+                    ? 'gradient-primary glow-primary shadow-lg'
+                    : 'glassmorphism hover:glow-primary hover:scale-[1.02]'
+                }`}
+              >
                 <div className="flex items-center gap-3">
-                  <Button
-                    variant={isEnabled(sound.id) ? 'default' : 'outline'}
-                    size="sm"
-                    onClick={() => toggleSound(sound.id, !isEnabled(sound.id))}
-                    className={isEnabled(sound.id) ? 'gradient-primary' : ''}
-                  >
-                    {isEnabled(sound.id) ? (
-                      <Pause className="w-4 h-4" />
-                    ) : (
-                      <Play className="w-4 h-4" />
-                    )}
-                  </Button>
-                  <div>
-                    <p className="font-medium text-sm flex items-center gap-2">
-                      {sound.icon && <span>{sound.icon}</span>}
-                      {sound.display_name}
-                    </p>
-                    {sound.description && (
-                      <p className="text-xs text-muted-foreground">{sound.description}</p>
-                    )}
-                  </div>
+                  {getSoundIcon(sound.name)}
+                  <span className="text-sm">{sound.display_name}</span>
                 </div>
-              </div>
-              
-              {isEnabled(sound.id) && (
-                <motion.div
-                  initial={{ opacity: 0, height: 0 }}
-                  animate={{ opacity: 1, height: 'auto' }}
-                  exit={{ opacity: 0, height: 0 }}
-                  className="flex items-center gap-3 pl-12"
-                >
-                  <VolumeX className="w-3 h-3 text-muted-foreground flex-shrink-0" />
+                {activeSoundId === sound.id && (
+                  <Volume2 className="w-4 h-4 animate-pulse" />
+                )}
+              </motion.button>
+            ))}
+            
+            {activeSoundId && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: 'auto' }}
+                exit={{ opacity: 0, height: 0 }}
+                className="pt-4 border-t border-border/50"
+              >
+                <div className="flex items-center gap-3 px-2">
+                  <Volume2 className="w-4 h-4 text-muted-foreground flex-shrink-0" />
                   <Slider
-                    value={[getVolume(sound.id)]}
-                    onValueChange={(value) => handleVolumeChange(sound.id, value)}
+                    value={[getVolume(activeSoundId)]}
+                    onValueChange={(value) => handleVolumeChange(activeSoundId, value)}
                     max={100}
                     step={1}
                     className="flex-1"
                   />
-                  <Volume2 className="w-3 h-3 text-muted-foreground flex-shrink-0" />
                   <span className="text-xs text-muted-foreground w-8 text-right">
-                    {getVolume(sound.id)}%
+                    {getVolume(activeSoundId)}%
                   </span>
-                </motion.div>
-              )}
-            </motion.div>
-          ))
+                </div>
+              </motion.div>
+            )}
+          </>
         )}
-
-        <div className="pt-4 border-t border-border">
-          <p className="text-xs text-muted-foreground text-center">
-            Mix and match sounds to create your perfect focus environment
-          </p>
-        </div>
       </CardContent>
     </Card>
   );

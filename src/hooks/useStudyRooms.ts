@@ -76,15 +76,11 @@ export function useStudyRooms() {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) throw new Error('User not authenticated')
 
-      // Generate unique room code
-      const roomCode = Math.random().toString(36).substring(2, 8).toUpperCase()
-
       const { data, error } = await supabase
         .from('study_rooms')
         .insert([{
           ...roomData,
-          host_user_id: user.id,
-          room_code: roomCode
+          created_by: user.id,
         }])
         .select()
         .single()

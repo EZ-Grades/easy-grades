@@ -138,12 +138,26 @@ export function AdvancedCalendar() {
   const isMobile = useIsMobile();
   const calendarRef = useRef<HTMLDivElement>(null);
 
-  // Calendar settings
+  // Calendar settings - Default to theme-aware colors
+  const getDefaultTextColor = () => {
+    if (typeof window !== 'undefined') {
+      return document.documentElement.classList.contains('dark') ? '#E8F1F5' : '#0F1E2E';
+    }
+    return '#0F1E2E';
+  };
+
+  const getDefaultBgColor = () => {
+    if (typeof window !== 'undefined') {
+      return document.documentElement.classList.contains('dark') ? '#1A2942' : '#FFFFFF';
+    }
+    return '#FFFFFF';
+  };
+
   const [settings, setSettings] = useState<CalendarSettings>({
     fontFamily: 'system',
     fontSize: 14,
-    textColor: 'currentColor',
-    backgroundColor: 'transparent',
+    textColor: getDefaultTextColor(),
+    backgroundColor: getDefaultBgColor(),
     showIcons: true,
     compactMode: false,
   });
@@ -452,50 +466,68 @@ export function AdvancedCalendar() {
                   </div>
 
                   {/* Custom Colors */}
-                  <div className="space-y-4">
-                    <Label className="flex items-center gap-2">
-                      <Palette className="w-4 h-4" />
-                      Customization
+                  <div className="space-y-4 p-4 rounded-lg glass-card-enhanced">
+                    <Label className="flex items-center gap-2 font-semibold">
+                      <Palette className="w-5 h-5 text-primary" />
+                      Color Customization
                     </Label>
                     
                     {/* Text Color */}
-                    <div className="space-y-2">
-                      <Label className="text-sm">Text Color</Label>
-                      <div className="flex items-center gap-2">
-                        <Input
-                          type="color"
-                          value={settings.textColor}
-                          onChange={(e) => setSettings({ ...settings, textColor: e.target.value })}
-                          className="w-16 h-10 p-1 cursor-pointer"
-                        />
+                    <div className="space-y-3">
+                      <Label className="text-sm font-medium">Text Color</Label>
+                      <div className="flex items-center gap-3">
+                        <div className="relative">
+                          <Input
+                            type="color"
+                            value={settings.textColor}
+                            onChange={(e) => setSettings({ ...settings, textColor: e.target.value })}
+                            className="w-20 h-12 p-1 cursor-pointer rounded-lg border-2 border-border"
+                          />
+                        </div>
                         <Input
                           type="text"
-                          value={settings.textColor}
-                          onChange={(e) => setSettings({ ...settings, textColor: e.target.value })}
-                          className="flex-1"
-                          placeholder="#000000"
+                          value={settings.textColor.toUpperCase()}
+                          onChange={(e) => {
+                            const value = e.target.value;
+                            if (/^#[0-9A-Fa-f]{0,6}$/.test(value)) {
+                              setSettings({ ...settings, textColor: value });
+                            }
+                          }}
+                          className="flex-1 font-mono"
+                          placeholder="#0F1E2E"
+                          maxLength={7}
                         />
                       </div>
+                      <p className="text-xs text-muted-foreground">Sets the color for calendar text and dates</p>
                     </div>
                     
                     {/* Background Color */}
-                    <div className="space-y-2">
-                      <Label className="text-sm">Background Color</Label>
-                      <div className="flex items-center gap-2">
-                        <Input
-                          type="color"
-                          value={settings.backgroundColor}
-                          onChange={(e) => setSettings({ ...settings, backgroundColor: e.target.value })}
-                          className="w-16 h-10 p-1 cursor-pointer"
-                        />
+                    <div className="space-y-3">
+                      <Label className="text-sm font-medium">Background Color</Label>
+                      <div className="flex items-center gap-3">
+                        <div className="relative">
+                          <Input
+                            type="color"
+                            value={settings.backgroundColor === 'transparent' ? '#FFFFFF' : settings.backgroundColor}
+                            onChange={(e) => setSettings({ ...settings, backgroundColor: e.target.value })}
+                            className="w-20 h-12 p-1 cursor-pointer rounded-lg border-2 border-border"
+                          />
+                        </div>
                         <Input
                           type="text"
-                          value={settings.backgroundColor}
-                          onChange={(e) => setSettings({ ...settings, backgroundColor: e.target.value })}
-                          className="flex-1"
-                          placeholder="transparent"
+                          value={settings.backgroundColor === 'transparent' ? 'transparent' : settings.backgroundColor.toUpperCase()}
+                          onChange={(e) => {
+                            const value = e.target.value.toLowerCase();
+                            if (value === 'transparent' || /^#[0-9A-Fa-f]{0,6}$/.test(value)) {
+                              setSettings({ ...settings, backgroundColor: value });
+                            }
+                          }}
+                          className="flex-1 font-mono"
+                          placeholder="#FFFFFF or transparent"
+                          maxLength={11}
                         />
                       </div>
+                      <p className="text-xs text-muted-foreground">Background color for exported calendar images</p>
                     </div>
                   </div>
 

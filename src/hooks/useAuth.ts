@@ -149,6 +149,7 @@ export function useAuth() {
     try {
       setLoading(true)
       setError(null)
+      console.log('🔐 Creating user account with email verification...')
 
       const { data, error } = await supabase.auth.signUp({
         email,
@@ -157,26 +158,33 @@ export function useAuth() {
           data: {
             full_name: fullName,
             username: fullName.split(' ')[0] || 'Scholar'
-          }
+          },
+          emailRedirectTo: `${window.location.origin}/auth/callback`
         }
       })
 
       if (error) {
+        console.error('❌ Signup error:', error.message)
         setError(error.message)
         return { success: false, error: error.message }
       }
 
+      // Check if email confirmation is required
       if (data.user && !data.user.email_confirmed_at) {
+        console.log('📧 Email verification required for:', data.user.email)
         return { 
           success: true, 
           needsVerification: true,
-          message: 'Check your email to verify your account before logging in.' 
+          message: 'Please check your email to verify your account. Click the verification link to continue.' 
         }
       }
 
+      // If email is already confirmed (instant confirmation enabled)
+      console.log('✅ Account created and confirmed:', data.user?.email)
       return { success: true }
     } catch (err) {
       const message = err instanceof Error ? err.message : 'An unexpected error occurred'
+      console.error('❌ Unexpected signup error:', err)
       setError(message)
       return { success: false, error: message }
     } finally {
@@ -251,26 +259,38 @@ export function useAuth() {
     try {
       setLoading(true)
       setError(null)
+      
+      const redirectUrl = window.location.origin;
+      console.log('🔐 Initiating Google OAuth...');
+      console.log('🔗 OAuth redirect URL:', redirectUrl);
 
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: window.location.origin
+          redirectTo: redirectUrl,
+          queryParams: {
+            access_type: 'offline',
+            prompt: 'consent',
+          }
         }
       })
 
       if (error) {
+        console.error('❌ Google OAuth error:', error);
         setError(error.message)
         return { success: false, error: error.message }
       }
 
+      console.log('✅ Google OAuth initiated successfully');
       return { success: true }
     } catch (err) {
+      console.error('❌ Unexpected error in Google OAuth:', err);
       const message = err instanceof Error ? err.message : 'An unexpected error occurred'
       setError(message)
       return { success: false, error: message }
     } finally {
-      setLoading(false)
+      // Keep loading state true during redirect
+      // setLoading(false) - Don't set false here as redirect will happen
     }
   }
 

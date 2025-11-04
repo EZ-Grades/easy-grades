@@ -58,9 +58,9 @@ export interface PracticeSession {
   questions_attempted: number;
   questions_correct: number;
   score_percentage: number;
-  time_spent_seconds: number;
-  started_at: string;
-  completed_at?: string;
+  duration_minutes: number;
+  start_time: string;
+  end_time?: string;
   session_data?: any;
 }
 
@@ -220,7 +220,7 @@ export async function getAllFlashcardDecks(category?: string) {
       .order('title');
 
     if (category && category !== 'all') {
-      query = query.eq('category', category);
+      query = query.eq('subject', category);
     }
 
     const { data, error } = await query;
@@ -259,11 +259,11 @@ export async function createPracticeSession(
 ) {
   try {
     const { data, error } = await supabase
-      .from('user_practice_sessions')
+      .from('practice_sessions')
       .insert({
         user_id: userId,
         certification_id: certificationId,
-        started_at: new Date().toISOString()
+        start_time: new Date().toISOString()
       })
       .select()
       .single();
@@ -289,7 +289,7 @@ export async function updatePracticeSession(
 ) {
   try {
     const { data, error } = await supabase
-      .from('user_practice_sessions')
+      .from('practice_sessions')
       .update(updates)
       .eq('id', sessionId)
       .select()
@@ -340,7 +340,7 @@ export async function getUserPracticeSessions(
 ) {
   try {
     let query = supabase
-      .from('user_practice_sessions')
+      .from('practice_sessions')
       .select(`
         *,
         certifications(name, provider)
@@ -517,13 +517,12 @@ export async function saveAIGeneratedFlashcardDeck(
     const { data: deck, error: deckError } = await supabase
       .from('flashcard_decks')
       .insert({
-        certification_id: certificationId,
+        user_id: userId,
         title,
         description,
+        subject: category,
         card_count: flashcards.length,
-        category,
         is_public: true,
-        created_by: userId || null
       })
       .select()
       .single();
@@ -558,10 +557,10 @@ export async function saveAIGeneratedFlashcardDeck(
 export async function getUserStats(userId: string, certificationId?: string) {
   try {
     let query = supabase
-      .from('user_practice_sessions')
+      .from('practice_sessions')
       .select('*')
       .eq('user_id', userId)
-      .not('completed_at', 'is', null);
+      .not('end_time', 'is', null);
 
     if (certificationId) {
       query = query.eq('certification_id', certificationId);

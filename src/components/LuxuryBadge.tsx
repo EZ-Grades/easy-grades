@@ -28,9 +28,9 @@ export function LuxuryBadge({
   const variantClasses = {
     primary: 'gradient-primary text-white shadow-lg',
     secondary: 'gradient-secondary text-white shadow-lg',
-    highlight: 'gradient-highlight text-gray-900 shadow-lg',
+    highlight: 'gradient-highlight text-foreground shadow-lg',
     success: 'bg-green-500 text-white shadow-lg',
-    warning: 'bg-yellow-500 text-gray-900 shadow-lg',
+    warning: 'bg-yellow-500 text-foreground shadow-lg',
     error: 'gradient-error text-white shadow-lg'
   };
 

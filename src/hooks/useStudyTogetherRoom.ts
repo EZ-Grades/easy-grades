@@ -257,8 +257,8 @@ export function useStudyTogetherRoom(roomId: string | null) {
   // Determine if current user is host
   useEffect(() => {
     if (room && participants.length > 0) {
-      const currentUserId = participants.find((p) => p.user_id === room.host_user_id)?.user_id;
-      setIsHost(currentUserId === room.host_user_id);
+      const currentUserId = participants.find((p) => p.user_id === room.created_by)?.user_id;
+      setIsHost(currentUserId === room.created_by);
     }
   }, [room, participants]);
 

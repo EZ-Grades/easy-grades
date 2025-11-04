@@ -13,7 +13,7 @@ import {
   LogOut,
   User
 } from 'lucide-react';
-import Logo from "../assets/Logo.png";
+import { EZGradesLogo } from './EZGradesLogo';
 import {
   Sidebar as SidebarBase,
   SidebarContent,
@@ -83,12 +83,8 @@ export function CustomSidebar({ currentPage, onPageChange, user, onLogout }: Sid
       {/* Header with Logo */}
       <SidebarHeader className={isCollapsed ? "p-2 flex items-center justify-center" : "p-4"}>
         <div className={`flex items-center sidebar-logo-container ${isCollapsed ? 'justify-center' : 'gap-3'}`}>
-            <div className="mb">
-        <img
-          src={Logo}
-          alt="App Logo"
-          className="w-20 h-20 rounded-full object-cover border-2 border-gray-700 shadow-md"
-        />
+          <div className="w-10 h-10 rounded-xl glass-card flex items-center justify-center glow-primary shrink-0">
+            <EZGradesLogo size="lg" animated={true} />
           </div>
           {!isCollapsed && (
             <span className="text-gradient-primary font-semibold text-xl">EZ Grades</span>
@@ -99,7 +95,7 @@ export function CustomSidebar({ currentPage, onPageChange, user, onLogout }: Sid
       {/* Navigation Menu */}
       <SidebarContent className={isCollapsed ? "px-2" : "px-2"}>
         <SidebarGroup>
-          <SidebarGroupContent>
+                    <SidebarGroupContent>
             <SidebarMenu className="space-y-1">
               {navItems.map((item) => {
                 const Icon = item.icon;

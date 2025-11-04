@@ -419,7 +419,7 @@ export function BreakMode() {
             >
               <Coffee className="w-8 h-8 text-highlight-solid" />
             </motion.div>
-            <h1 className="text-5xl font-bold text-gradient-primary">
+            <h1 className="text-5xl text-gradient-primary">
               Break Time
             </h1>
           </div>
@@ -570,7 +570,7 @@ export function BreakMode() {
                   className="text-8xl mb-6"
                   animate={{ 
                     scale: [1, 1.2, 1],
-                    color: ['#7D4AE1', '#3AB0A0', '#7D4AE1']
+                    color: ['#6BA5AF', '#7CB3BD', '#6BA5AF']
                   }}
                   transition={{ duration: 1, repeat: Infinity }}
                 >

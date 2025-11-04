@@ -1,0 +1,76 @@
+================================================================================
+⚡ EZ GRADES DATABASE - ULTRA QUICK START
+================================================================================
+
+🎯 GOAL: Deploy complete database with 44 tables in 5 minutes
+
+📋 CHECKLIST:
+  ☐ Run DROP_ALL_TABLES.sql
+  ☐ Run UNIFIED_SCHEMA.sql (wait for success message)
+  ☐ Run VERIFY_TABLES.sql (confirm 44 tables)
+  ☐ Run AUTO_PROFILE_TRIGGER.sql (CRITICAL - auto profile creation)
+  ☐ Run seed_data.sql (add sample content)
+  ☐ Test app
+
+================================================================================
+COPY-PASTE THESE IN ORDER
+================================================================================
+
+1️⃣ CLEAN SLATE
+   Open: DROP_ALL_TABLES.sql → Copy All → Run
+   Wait for: ✅ All tables dropped
+
+2️⃣ CREATE TABLES
+   Open: UNIFIED_SCHEMA.sql → Copy All → Run
+   Wait for: ✅ 44 tables created
+
+3️⃣ VERIFY
+   Open: VERIFY_TABLES.sql → Copy All → Run
+   Look for: 🎉 SUCCESS!
+
+4️⃣ CREATE TRIGGER (CRITICAL!)
+   Open: AUTO_PROFILE_TRIGGER.sql → Copy All → Run
+   Wait for: ✅ Auto profile trigger created
+   This makes signup work properly!
+
+5️⃣ ADD CONTENT
+   Open: seed_data.sql → Copy All → Run
+   Wait for: ✅ Seed data inserted
+
+================================================================================
+EXPECTED RESULTS
+================================================================================
+
+After Step 2: 44 tables in database
+After Step 3: All tables show ✅ (no ❌)
+After Step 4: Sample music, courses, achievements loaded
+
+================================================================================
+TROUBLESHOOTING
+================================================================================
+
+❌ "relation already exists"
+   → Re-run DROP_ALL_TABLES.sql first
+
+❌ Still 39 tables
+   → Check Supabase logs for errors
+   → Re-run UNIFIED_SCHEMA.sql
+
+❌ App shows "no profiles table"
+   → Run VERIFY_TABLES.sql to see what's missing
+   → Re-run UNIFIED_SCHEMA.sql
+
+================================================================================
+DONE? TEST THESE:
+================================================================================
+
+✓ Sign up / Login works
+✓ Can create focus session
+✓ Can add tasks
+✓ Music player has tracks
+✓ Study Hub shows courses
+✓ Settings shows achievements
+
+================================================================================
+TIME: 5 minutes total (2 min schema + 1 min verify + 2 min content)
+================================================================================

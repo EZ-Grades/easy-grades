@@ -2,9 +2,10 @@ import { supabase } from '../lib/supabase';
 
 export interface Inspiration {
   id: string;
-  text: string;
-  author?: string;
-  date_published?: string;
+  type: 'quote' | 'tip' | 'fact';
+  content: string;  // Fixed: column name is 'content' not 'quote'
+  author: string | null;
+  category: string;
   is_active: boolean;
   created_at: string;
 }
@@ -45,53 +46,73 @@ export async function getDailyInspiration(): Promise<{ data: Inspiration | null;
 function getRandomFallbackInspiration(): Inspiration {
   const fallbackQuotes: Omit<Inspiration, 'id' | 'created_at'>[] = [
     {
-      text: 'The secret of getting ahead is getting started.',
+      type: 'quote',
+      content: 'The secret of getting ahead is getting started.',
       author: 'Mark Twain',
+      category: 'motivation',
       is_active: true,
     },
     {
-      text: 'Education is the most powerful weapon which you can use to change the world.',
+      type: 'quote',
+      content: 'Education is the most powerful weapon which you can use to change the world.',
       author: 'Nelson Mandela',
+      category: 'learning',
       is_active: true,
     },
     {
-      text: 'The expert in anything was once a beginner.',
+      type: 'quote',
+      content: 'The expert in anything was once a beginner.',
       author: 'Helen Hayes',
+      category: 'motivation',
       is_active: true,
     },
     {
-      text: 'Success is not final, failure is not fatal: it is the courage to continue that counts.',
+      type: 'quote',
+      content: 'Success is not final, failure is not fatal: it is the courage to continue that counts.',
       author: 'Winston Churchill',
+      category: 'motivation',
       is_active: true,
     },
     {
-      text: 'The only way to do great work is to love what you do.',
+      type: 'quote',
+      content: 'The only way to do great work is to love what you do.',
       author: 'Steve Jobs',
+      category: 'motivation',
       is_active: true,
     },
     {
-      text: 'Believe you can and you\'re halfway there.',
+      type: 'quote',
+      content: "Believe you can and you're halfway there.",
       author: 'Theodore Roosevelt',
+      category: 'motivation',
       is_active: true,
     },
     {
-      text: 'Learning never exhausts the mind.',
+      type: 'quote',
+      content: 'Learning never exhausts the mind.',
       author: 'Leonardo da Vinci',
+      category: 'learning',
       is_active: true,
     },
     {
-      text: 'The beautiful thing about learning is that no one can take it away from you.',
+      type: 'quote',
+      content: 'The beautiful thing about learning is that no one can take it away from you.',
       author: 'B.B. King',
+      category: 'learning',
       is_active: true,
     },
     {
-      text: 'Don\'t watch the clock; do what it does. Keep going.',
+      type: 'tip',
+      content: "Don't watch the clock; do what it does. Keep going.",
       author: 'Sam Levenson',
+      category: 'productivity',
       is_active: true,
     },
     {
-      text: 'The future belongs to those who believe in the beauty of their dreams.',
+      type: 'quote',
+      content: 'The future belongs to those who believe in the beauty of their dreams.',
       author: 'Eleanor Roosevelt',
+      category: 'motivation',
       is_active: true,
     },
   ];
@@ -156,10 +177,10 @@ export async function addInspiration(inspiration: Omit<Inspiration, 'id' | 'crea
     const { data, error } = await supabase
       .from('inspirations')
       .insert({
-        text: inspiration.text,
+        type: inspiration.type,
+        content: inspiration.content,
         author: inspiration.author,
         category: inspiration.category,
-        date_published: inspiration.date_published,
         is_active: inspiration.is_active ?? true,
       })
       .select()

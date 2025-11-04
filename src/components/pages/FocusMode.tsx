@@ -18,6 +18,7 @@ import {
   Music,
   Sparkles
 } from 'lucide-react';
+import { Card } from '../ui/card';
 import { GlassCard } from '../GlassCard';
 import { ProgressRing } from '../ProgressRing';
 import { Button } from '../ui/button';
@@ -27,6 +28,7 @@ import { useAuth } from '../../hooks/useAuth';
 import { toast } from 'sonner@2.0.3';
 import { FocusJournal } from '../FocusJournal';
 import { FlipClock } from '../FlipClock';
+import { AmbientSounds } from '../AmbientSounds';
 
 // Ambience mode type
 interface AmbienceMode {
@@ -47,43 +49,43 @@ const FALLBACK_AMBIENCES: AmbienceMode[] = [
     name: 'Café', 
     description: 'Warm coffee shop atmosphere', 
     icon: '☕', 
-    bg_class: 'bg-gradient-to-br from-amber-100 via-orange-50 to-yellow-100 dark:from-amber-900 dark:via-orange-800 dark:to-yellow-900',
-    background_url: 'https://images.unsplash.com/photo-1442512595331-e89e73853f31?w=1920&q=80', // Replace with Supabase URL
-    sound_url: 'https://assets.mixkit.co/active_storage/sfx/2488/2488-preview.mp3'
+    bg_class: 'bg-gradient-to-br from-amber-50 via-orange-50 to-yellow-50 dark:from-[#1F1A0B] dark:via-[#2E2412] dark:to-[#3A2E1A]',
+    background_url: 'https://images.unsplash.com/photo-1442512595331-e89e73853f31?w=1920&q=80'
+    // sound_url disabled - external audio sources not available
   },
   { 
     id: 'forest', 
     name: 'Forest', 
     description: 'Natural green scenery', 
     icon: '🌲', 
-    bg_class: 'bg-gradient-to-br from-green-100 via-emerald-50 to-teal-100 dark:from-green-900 dark:via-emerald-800 dark:to-teal-900',
-    background_url: 'https://images.unsplash.com/photo-1441974231531-c6227db76b6e?w=1920&q=80', // Replace with Supabase URL
-    sound_url: 'https://assets.mixkit.co/active_storage/sfx/2396/2396-preview.mp3'
+    bg_class: 'bg-gradient-to-br from-emerald-50 via-green-50 to-teal-50 dark:from-[#0B1F1A] dark:via-[#0F2E24] dark:to-[#1A3A32]',
+    background_url: 'https://images.unsplash.com/photo-1441974231531-c6227db76b6e?w=1920&q=80'
+    // sound_url disabled - external audio sources not available
   },
   { 
     id: 'ocean', 
     name: 'Ocean', 
     description: 'Calming ocean waves', 
     icon: '🌊', 
-    bg_class: 'bg-gradient-to-br from-cyan-100 via-blue-50 to-teal-100 dark:from-cyan-900 dark:via-blue-800 dark:to-teal-900',
-    background_url: 'https://images.unsplash.com/photo-1505142468610-359e7d316be0?w=1920&q=80', // Replace with Supabase URL
-    sound_url: 'https://assets.mixkit.co/active_storage/sfx/2390/2390-preview.mp3'
+    bg_class: 'bg-gradient-to-br from-cyan-50 via-blue-50 to-teal-50 dark:from-[#0B1F24] dark:via-[#1A2E42] dark:to-[#1E3A4F]',
+    background_url: 'https://images.unsplash.com/photo-1505142468610-359e7d316be0?w=1920&q=80'
+    // sound_url disabled - external audio sources not available
   },
   { 
     id: 'rain', 
     name: 'Rain', 
     description: 'Gentle rain sounds', 
     icon: '🌧️', 
-    bg_class: 'bg-gradient-to-br from-slate-100 via-gray-50 to-blue-100 dark:from-slate-900 dark:via-gray-800 dark:to-blue-900',
-    background_url: 'https://images.unsplash.com/photo-1515694346937-94d85e41e6f0?w=1920&q=80', // Replace with Supabase URL
-    sound_url: 'https://assets.mixkit.co/active_storage/sfx/2393/2393-preview.mp3'
+    bg_class: 'bg-gradient-to-br from-slate-50 via-gray-50 to-blue-50 dark:from-[#0B1524] dark:via-[#1A2942] dark:to-[#1E3A5F]',
+    background_url: 'https://images.unsplash.com/photo-1515694346937-94d85e41e6f0?w=1920&q=80'
+    // sound_url disabled - external audio sources not available
   },
   { 
     id: 'library', 
     name: 'Library', 
     description: 'Classic study environment', 
     icon: '📚', 
-    bg_class: 'bg-gradient-to-br from-slate-100 via-gray-50 to-blue-100 dark:from-slate-900 dark:via-gray-800 dark:to-blue-900',
+    bg_class: 'bg-gradient-to-br from-slate-50 via-gray-50 to-blue-50 dark:from-[#0B1524] dark:via-[#1A2942] dark:to-[#1E3A5F]',
     background_url: 'https://images.unsplash.com/photo-1521587760476-6c12a4b040da?w=1920&q=80' // Replace with Supabase URL
   },
   { 
@@ -91,7 +93,7 @@ const FALLBACK_AMBIENCES: AmbienceMode[] = [
     name: 'Mountain', 
     description: 'Peaceful mountain scenery', 
     icon: '🏔️', 
-    bg_class: 'bg-gradient-to-br from-blue-100 via-indigo-50 to-purple-100 dark:from-blue-900 dark:via-indigo-800 dark:to-purple-900',
+    bg_class: 'bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 dark:from-[#0F1A2E] dark:via-[#1A2442] dark:to-[#1E2A4F]',
     background_url: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=1920&q=80' // Replace with Supabase URL
   },
   { 
@@ -99,7 +101,7 @@ const FALLBACK_AMBIENCES: AmbienceMode[] = [
     name: 'Zen', 
     description: 'Clean and distraction-free', 
     icon: '🧘', 
-    bg_class: 'bg-gradient-to-br from-gray-50 via-white to-gray-100 dark:from-gray-900 dark:via-slate-800 dark:to-gray-800',
+    bg_class: 'bg-gradient-to-br from-gray-50 via-slate-50 to-gray-100 dark:from-[#0B1524] dark:via-[#12202E] dark:to-[#1A2942]',
     background_url: 'https://images.unsplash.com/photo-1545389336-cf090694435e?w=1920&q=80' // Replace with Supabase URL
   },
   { 
@@ -107,9 +109,9 @@ const FALLBACK_AMBIENCES: AmbienceMode[] = [
     name: 'Fireplace', 
     description: 'Cozy crackling fire', 
     icon: '🔥', 
-    bg_class: 'bg-gradient-to-br from-orange-100 via-red-50 to-yellow-100 dark:from-orange-900 dark:via-red-800 dark:to-yellow-900',
-    background_url: 'https://images.unsplash.com/photo-1574643156929-51fa098b0394?w=1920&q=80', // Replace with Supabase URL
-    sound_url: 'https://assets.mixkit.co/active_storage/sfx/2398/2398-preview.mp3'
+    bg_class: 'bg-gradient-to-br from-orange-50 via-amber-50 to-yellow-50 dark:from-[#1F1A0B] dark:via-[#2E2412] dark:to-[#3A2E1A]',
+    background_url: 'https://images.unsplash.com/photo-1574643156929-51fa098b0394?w=1920&q=80'
+    // sound_url disabled - external audio sources not available
   }
 ];
 
@@ -122,9 +124,6 @@ export function FocusMode() {
   const [selectedAmbience, setSelectedAmbience] = useState<AmbienceMode | null>(null);
   const [showAmbienceSelector, setShowAmbienceSelector] = useState(false);
   const [ambienceModes, setAmbienceModes] = useState<AmbienceMode[]>(FALLBACK_AMBIENCES);
-  const [playingAmbience, setPlayingAmbience] = useState<string | null>(null);
-  const [ambienceVolume, setAmbienceVolume] = useState(50);
-  const [audioElement, setAudioElement] = useState<HTMLAudioElement | null>(null);
   const [sessionStartTime, setSessionStartTime] = useState<Date | null>(null);
   const [totalMinutes, setTotalMinutes] = useState(0);
   const [journalEntry, setJournalEntry] = useState('');
@@ -151,12 +150,6 @@ export function FocusMode() {
       }
     }
 
-    // Load volume preference
-    const savedVolume = localStorage.getItem('focus_ambience_volume');
-    if (savedVolume) {
-      setAmbienceVolume(parseInt(savedVolume));
-    }
-
     // Load custom background
     const savedCustomBg = localStorage.getItem('focus_custom_background');
     if (savedCustomBg) {
@@ -174,16 +167,6 @@ export function FocusMode() {
     if (savedJournal) {
       setJournalEntry(savedJournal);
     }
-
-    // Initialize audio element
-    const audio = new Audio();
-    audio.loop = true;
-    setAudioElement(audio);
-
-    return () => {
-      audio.pause();
-      audio.src = '';
-    };
   }, []);
 
   // Save journal entry to localStorage
@@ -264,7 +247,7 @@ export function FocusMode() {
       name: 'Custom',
       description: 'Your personalized environment',
       icon: '🎨',
-      bg_class: 'bg-gradient-to-br from-violet-100 via-purple-50 to-pink-100 dark:from-violet-900 dark:via-purple-800 dark:to-pink-900',
+      bg_class: 'bg-gradient-to-br from-violet-50 via-purple-50 to-pink-50 dark:from-[#1A0F2E] dark:via-[#241A3A] dark:to-[#2E1A42]',
       background_url: customBackground || undefined,
       sound_url: customSound || undefined,
       isCustom: true
@@ -508,30 +491,28 @@ export function FocusMode() {
       <div className="min-h-screen pb-8 px-4 pt-8">
         <div className="max-w-5xl mx-auto">
           <motion.div 
-            className="mb-8 text-center"
-            initial={{ opacity: 0, y: -20 }}
+            className="mb-8"
+            initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6 }}
+            transition={{ duration: 0.4 }}
           >
-            <h1 className="text-4xl mb-2">
-              <span className="text-gradient-primary">Choose Your Ambience</span> 🎯
-            </h1>
-            <p className="text-lg text-muted-foreground">Select the perfect environment for your focus session</p>
+            <h1 className="text-2xl mb-1 text-gradient-primary">Choose Your Ambience</h1>
+            <p className="text-sm text-muted-foreground">Select an environment for your focus session</p>
           </motion.div>
 
-          <GlassCard className="p-8">
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+          <Card className="glass-card-enhanced p-6">
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 mb-6">
               {ambienceModes.map((ambience, index) => (
                 <motion.div
                   key={ambience.id}
-                  initial={{ opacity: 0, y: 20 }}
+                  initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: index * 0.05 }}
+                  transition={{ delay: index * 0.03 }}
                   className={`
-                    relative p-6 rounded-xl border-2 transition-all duration-300 cursor-pointer overflow-hidden
+                    relative p-4 rounded-lg border transition-all cursor-pointer
                     ${selectedAmbience?.id === ambience.id 
-                      ? 'border-primary-solid bg-primary-solid/10 glow-primary scale-105' 
-                      : 'border-muted hover:border-primary-solid/50 hover:scale-102'
+                      ? 'border-primary glow-primary bg-gradient-to-br from-primary/10 to-highlight/5' 
+                      : 'glass-card hover:border-primary/50 hover:shadow-lg'
                     }
                   `}
                   onClick={() => {
@@ -540,16 +521,12 @@ export function FocusMode() {
                       setShowCustomizer(true);
                     }
                   }}
-                  whileHover={{ y: -5 }}
                   whileTap={{ scale: 0.98 }}
                 >
-                  {/* Background preview */}
-                  <div className={`absolute inset-0 ${ambience.bg_class} opacity-20`} />
-                  
                   {/* Content */}
-                  <div className="relative z-10 text-center">
-                    <div className="text-5xl mb-3">{ambience.icon}</div>
-                    <h3 className="mb-2">{ambience.name}</h3>
+                  <div className="relative text-center">
+                    <div className="text-3xl mb-2">{ambience.icon}</div>
+                    <h3 className="text-sm font-medium mb-1">{ambience.name}</h3>
                     <p className="text-xs text-muted-foreground">{ambience.description}</p>
                     
                     {/* Selected indicator */}
@@ -557,9 +534,9 @@ export function FocusMode() {
                       <motion.div
                         initial={{ scale: 0 }}
                         animate={{ scale: 1 }}
-                        className="absolute top-2 right-2 w-6 h-6 rounded-full bg-primary-solid flex items-center justify-center"
+                        className="absolute -top-1 -right-1 w-5 h-5 rounded-full gradient-primary flex items-center justify-center shadow-lg"
                       >
-                        <Check className="w-4 h-4 text-white" />
+                        <Check className="w-3 h-3 text-white" />
                       </motion.div>
                     )}
                   </div>
@@ -574,9 +551,9 @@ export function FocusMode() {
                   initial={{ opacity: 0, height: 0 }}
                   animate={{ opacity: 1, height: 'auto' }}
                   exit={{ opacity: 0, height: 0 }}
-                  className="mb-8 p-6 bg-primary-solid/5 rounded-xl border border-primary-solid/20"
+                  className="mb-6 p-4 rounded-lg glass-card-enhanced border-primary/40 glow-primary"
                 >
-                  <h3 className="text-lg mb-4 text-gradient-primary">Customize Your Environment</h3>
+                  <h3 className="text-sm font-medium mb-3">Customize Environment</h3>
                   
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {/* Background Upload */}
@@ -632,32 +609,32 @@ export function FocusMode() {
             </AnimatePresence>
 
             {/* Duration selector */}
-            <div className="mb-8">
-              <p className="text-sm text-muted-foreground mb-3 text-center">Focus Duration</p>
-              <div className="flex items-center justify-center gap-4">
+            <div className="mb-6">
+              <p className="text-xs text-muted-foreground mb-3 text-center">Duration</p>
+              <div className="flex items-center justify-center gap-2">
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={() => setFocusDuration(Math.max(5, focusDuration - 5))}
                 >
-                  <Minus className="w-4 h-4" />
+                  <Minus className="w-3.5 h-3.5" />
                 </Button>
-                <div className="text-center min-w-[100px]">
-                  <div className="text-3xl text-gradient-primary">{focusDuration}</div>
-                  <div className="text-xs text-muted-foreground">minutes</div>
+                <div className="text-center min-w-[80px] px-4 py-2 rounded-lg glass-card-enhanced">
+                  <div className="text-xl font-medium text-gradient-primary">{focusDuration}</div>
+                  <div className="text-xs text-muted-foreground">min</div>
                 </div>
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={() => setFocusDuration(Math.min(180, focusDuration + 5))}
                 >
-                  <Plus className="w-4 h-4" />
+                  <Plus className="w-3.5 h-3.5" />
                 </Button>
               </div>
             </div>
 
             {/* Action buttons */}
-            <div className="flex justify-center gap-4">
+            <div className="flex justify-center gap-2">
               <Button
                 variant="outline"
                 onClick={() => {
@@ -665,19 +642,31 @@ export function FocusMode() {
                   setSelectedAmbience(null);
                   setShowCustomizer(false);
                 }}
+                size="sm"
               >
                 Cancel
               </Button>
               <Button
                 onClick={handleStartSession}
                 disabled={!selectedAmbience}
-                className="bg-gradient-to-r from-blue-600 to-purple-600 text-white"
+                className="gradient-primary text-white"
+                size="sm"
               >
-                <Play className="w-4 h-4 mr-2" />
-                Start Focus Session
+                <Play className="w-3.5 h-3.5 mr-2" />
+                Start Session
               </Button>
             </div>
-          </GlassCard>
+          </Card>
+
+          {/* Ambient Sounds Panel */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.3 }}
+            className="mt-6"
+          >
+            <AmbientSounds className="max-w-2xl mx-auto" />
+          </motion.div>
         </div>
       </div>
     );
@@ -764,25 +753,38 @@ export function FocusMode() {
             initial={{ scale: 0.8, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             transition={{ delay: 0.2 }}
+            className="relative"
           >
+            {/* Enhanced glow effect */}
+            <div className="absolute inset-0 flex items-center justify-center">
+              <div className="w-72 h-72 rounded-full bg-primary-solid/20 blur-3xl animate-pulse"></div>
+            </div>
+            
             {isZenMode ? (
-              <FlipClock time={formatTime(focusTimer)} />
+              <div className="relative">
+                <FlipClock time={formatTime(focusTimer)} />
+              </div>
             ) : (
-              <ProgressRing 
-                progress={focusProgress} 
-                size={280} 
-                strokeWidth={16}
-                gradient="primary"
-              >
-                <div className="text-center">
-                  <div className="text-6xl mb-3 text-white">
-                    {formatTime(focusTimer)}
+              <div className="relative">
+                <ProgressRing 
+                  progress={focusProgress} 
+                  size={300} 
+                  strokeWidth={18}
+                  strokeLinecap="butt"
+                  gradient="primary"
+                >
+                  <div className="flex items-center justify-center">
+                    <div className="w-52 h-52 flex flex-col items-center justify-center text-center glassmorphism rounded-full bg-white/10">
+                      <div className="text-6xl mb-3 text-white font-mono tabular-nums">
+                        {formatTime(focusTimer)}
+                      </div>
+                      <div className="text-xl text-white/80">
+                        {isTimerRunning ? '✨ Deep Focus' : '⏸️ Paused'}
+                      </div>
+                    </div>
                   </div>
-                  <div className="text-xl text-white/70">
-                    {isTimerRunning ? 'Deep Focus' : 'Paused'}
-                  </div>
-                </div>
-              </ProgressRing>
+                </ProgressRing>
+              </div>
             )}
           </motion.div>
 
@@ -860,7 +862,7 @@ export function FocusMode() {
                 variant="outline"
                 size="lg"
                 onClick={() => setIsTimerRunning(!isTimerRunning)}
-                className="glassmorphism bg-white/10 border-white/20 text-white hover:bg-white/20"
+                className="glassmorphism bg-white/15 border-white/30 text-white hover:bg-white/25 hover:scale-105 transition-all duration-300 shadow-2xl"
               >
                 {isTimerRunning ? (
                   <>
@@ -879,7 +881,7 @@ export function FocusMode() {
                 variant="outline"
                 size="lg"
                 onClick={handleResetTimer}
-                className="glassmorphism bg-white/10 border-white/20 text-white hover:bg-white/20"
+                className="glassmorphism bg-white/15 border-white/30 text-white hover:bg-white/25 hover:scale-105 transition-all duration-300 shadow-2xl"
               >
                 <RotateCcw className="w-5 h-5 mr-2" />
                 Reset
@@ -893,18 +895,18 @@ export function FocusMode() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 0.6 }}
-              className="glassmorphism bg-white/10 backdrop-blur-md p-6 rounded-2xl max-w-md mx-auto"
+              className="glassmorphism bg-white/15 backdrop-blur-xl p-8 rounded-3xl max-w-md mx-auto shadow-2xl border border-white/30"
             >
               <div className="grid grid-cols-2 gap-6">
-                <div>
-                  <div className="text-3xl text-gradient-primary text-white">{totalMinutes}</div>
-                  <div className="text-sm text-white/70">Minutes Focused</div>
+                <div className="text-center">
+                  <div className="text-4xl text-white mb-1">{totalMinutes}</div>
+                  <div className="text-sm text-white/80">Minutes Focused</div>
                 </div>
-                <div>
-                  <div className="text-3xl text-gradient-secondary text-white">
+                <div className="text-center">
+                  <div className="text-4xl text-white mb-1">
                     {Math.round((totalMinutes / focusDuration) * 100)}%
                   </div>
-                  <div className="text-sm text-white/70">Complete</div>
+                  <div className="text-sm text-white/80">Complete</div>
                 </div>
               </div>
             </motion.div>
@@ -920,42 +922,41 @@ export function FocusMode() {
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <motion.div 
-          className="mb-8 text-center"
-          initial={{ opacity: 0, y: -20 }}
+          className="mb-8"
+          initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6 }}
+          transition={{ duration: 0.4 }}
         >
-          <h1 className="text-5xl font-bold">
-            <span className="text-gradient-primary">Deep Focus</span> 🎯
-          </h1>
-          <p className="text-lg text-muted-foreground">Enter the zone of maximum productivity</p>
+          <h1 className="text-2xl mb-1 text-gradient-primary">Deep Focus</h1>
         </motion.div>
 
         {/* Top Row: Timer and Ambient Sounds */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-8">
           {/* Focus Timer Card */}
-          <GlassCard className="p-8">
+          <Card className="glass-card-enhanced p-6">
             <div className="text-center">
-              <h2 className="text-xl mb-6 text-gradient-primary">
-                <Timer className="inline w-5 h-5 mr-2" />
-                Focus Session
+              <h2 className="text-base mb-6 flex items-center justify-center gap-2">
+                <div className="p-1.5 rounded-md gradient-primary">
+                  <Timer className="w-4 h-4 text-white" />
+                </div>
+                <span className="text-gradient-primary">Focus Session</span>
               </h2>
               
               {/* Duration Selector */}
-              <div className="mb-8">
-                <p className="text-sm text-muted-foreground mb-3">Set focus duration</p>
-                <div className="flex items-center justify-center gap-3">
+              <div className="mb-6">
+                <p className="text-xs text-muted-foreground mb-3">Duration</p>
+                <div className="flex items-center justify-center gap-2">
                   <Button
                     variant="outline"
                     size="sm"
                     onClick={() => setFocusDuration(Math.max(5, focusDuration - 5))}
                     disabled={isTimerRunning}
                   >
-                    <Minus className="w-4 h-4" />
+                    <Minus className="w-3.5 h-3.5" />
                   </Button>
-                  <div className="text-center min-w-[80px]">
-                    <div className="text-2xl">{focusDuration}</div>
-                    <div className="text-xs text-muted-foreground">minutes</div>
+                  <div className="text-center min-w-[70px] px-4 py-2 rounded-lg border border-border bg-muted/30">
+                    <div className="text-xl font-medium">{focusDuration}</div>
+                    <div className="text-xs text-muted-foreground">min</div>
                   </div>
                   <Button
                     variant="outline"
@@ -963,24 +964,25 @@ export function FocusMode() {
                     onClick={() => setFocusDuration(Math.min(180, focusDuration + 5))}
                     disabled={isTimerRunning}
                   >
-                    <Plus className="w-4 h-4" />
+                    <Plus className="w-3.5 h-3.5" />
                   </Button>
                 </div>
               </div>
               
-              {/* Timer Display */}
-              <div className="mb-8">
+              {/* Timer Display - Minimal */}
+              <div className="mb-6 flex justify-center">
                 <ProgressRing 
                   progress={focusProgress} 
-                  size={200} 
-                  strokeWidth={14}
+                  size={180} 
+                  strokeWidth={6}
+                  strokeLinecap="butt"
                   gradient="primary"
                 >
                   <div className="text-center">
-                    <div className="text-4xl mb-2">
+                    <div className="text-3xl mb-1 font-mono tabular-nums">
                       {formatTime(focusTimer)}
                     </div>
-                    <div className="text-sm text-muted-foreground">
+                    <div className="text-xs text-muted-foreground">
                       {isTimerRunning ? 'Focusing' : 'Ready'}
                     </div>
                   </div>
@@ -988,42 +990,43 @@ export function FocusMode() {
               </div>
 
               {/* Action Buttons */}
-              <div className="space-y-3">
+              <div className="space-y-2">
                 <Button
                   onClick={handleStartFullscreen}
-                  className="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg hover:shadow-xl transition-all duration-200"
-                  size="lg"
+                  className="w-full gradient-primary text-white"
+                  size="sm"
                 >
-                  <Maximize className="w-4 h-4 mr-2" />
-                  Start Fullscreen Focus
+                  <Maximize className="w-3.5 h-3.5 mr-2" />
+                  Fullscreen Focus
                 </Button>
                 
                 <Button
                   variant="outline"
                   onClick={handleNormalFocus}
                   className="w-full"
+                  size="sm"
                 >
                   {isTimerRunning ? (
                     <>
-                      <Pause className="w-4 h-4 mr-2" />
-                      Pause Focus
+                      <Pause className="w-3.5 h-3.5 mr-2" />
+                      Pause
                     </>
                   ) : (
                     <>
-                      <Zap className="w-4 h-4 mr-2" />
-                      Start Normal Focus
+                      <Zap className="w-3.5 h-3.5 mr-2" />
+                      Start
                     </>
                   )}
                 </Button>
                 
                 <Button
-                  variant="outline"
+                  variant="ghost"
                   size="sm"
                   onClick={handleResetTimer}
                   className="w-full"
                 >
-                  <RotateCcw className="w-4 h-4 mr-2" />
-                  Reset Timer
+                  <RotateCcw className="w-3.5 h-3.5 mr-2" />
+                  Reset
                 </Button>
               </div>
 
@@ -1032,102 +1035,45 @@ export function FocusMode() {
                 <motion.div
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
-                  className="mt-6 p-4 bg-primary-solid/10 rounded-lg border border-primary-solid/20"
+                  className="mt-6 p-4 glassmorphism rounded-lg glow-primary"
                 >
                   <div className="text-sm text-muted-foreground mb-1">Minutes Completed</div>
                   <div className="text-2xl text-gradient-primary">{totalMinutes}</div>
                 </motion.div>
               )}
             </div>
-          </GlassCard>
+          </Card>
 
-          {/* Ambient Sounds Card */}
-          <GlassCard className="p-8">
-            <div className="flex items-center gap-2 mb-6">
-              <Volume2 className="w-5 h-5 text-purple-500" />
-              <h2 className="text-xl text-gradient-primary">Ambient Sounds</h2>
-            </div>
-            <p className="text-sm text-muted-foreground mb-6">
-              Choose a calming background sound to enhance your focus
-            </p>
-
-            {/* Ambient sounds grid */}
-            <div className="grid grid-cols-2 gap-3 mb-6">
-              {ambienceModes.filter(a => a.sound_url).map((ambience) => (
-                <motion.button
-                  key={ambience.id}
-                  onClick={() => playAmbience(ambience.id)}
-                  className={`
-                    p-4 rounded-lg border-2 transition-all duration-300
-                    ${playingAmbience === ambience.id 
-                      ? 'border-purple-500 bg-purple-500/10' 
-                      : 'border-muted hover:border-purple-500/50'
-                    }
-                  `}
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                >
-                  <div className="text-3xl mb-2">{ambience.icon}</div>
-                  <div className="text-sm">{ambience.name}</div>
-                </motion.button>
-              ))}
-            </div>
-
-            {/* Volume control */}
-            <div className="space-y-2">
-              <div className="flex items-center justify-between text-sm">
-                <div className="flex items-center gap-2 text-muted-foreground">
-                  {ambienceVolume === 0 ? (
-                    <VolumeX className="w-4 h-4" />
-                  ) : (
-                    <Volume2 className="w-4 h-4" />
-                  )}
-                  <span>Volume</span>
-                </div>
-                <span className="text-xs">{ambienceVolume}%</span>
-              </div>
-              <Slider
-                value={[ambienceVolume]}
-                onValueChange={handleVolumeChange}
-                max={100}
-                step={1}
-                className="w-full"
-              />
-            </div>
-
-            {playingAmbience && (
-              <motion.div
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="mt-4 text-center text-sm text-muted-foreground"
-              >
-                🎵 {ambienceModes.find(a => a.id === playingAmbience)?.name} is playing
-                <div className="text-xs mt-1">Tap again to pause</div>
-              </motion.div>
-            )}
-          </GlassCard>
+          {/* Ambient Sounds Card - Available to Everyone */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2 }}
+            className="glass-card-enhanced overflow-hidden"
+          >
+            <AmbientSounds />
+          </motion.div>
         </div>
 
         {/* Bottom Row: Full-Width Journal */}
-        <GlassCard className="p-6">
+        <GlassCard className="glass-card-enhanced p-6">
           <div className="flex items-center gap-2 mb-4">
-            <BookOpen className="w-5 h-5 text-blue-500" />
+            <BookOpen className="w-5 h-5 text-primary-solid" />
             <h2 className="text-xl text-gradient-primary">Focus Journal</h2>
             <p className="text-sm text-muted-foreground ml-2">
               Write, decorate, and express yourself freely
             </p>
           </div>
           
-          {/* Embedded Journal - Full Width */}
-        <div className="h-[600px] overflow-hidden">
-  <FocusJournal
-    embedded
-    initialText={journalEntry}
-    onSave={(content) => setJournalEntry(content)}
-    className="h-full overflow-hidden"
-  />
-</div>
-
+          {/* Embedded Journal - Full Width with overflow fix */}
+          <div className="h-[600px] overflow-hidden rounded-xl">
+            <FocusJournal
+              embedded
+              initialText={journalEntry}
+              onSave={(content) => setJournalEntry(content)}
+              className="h-full"
+            />
+          </div>
         </GlassCard>
 
         {/* Info Notice for Guests */}
@@ -1137,7 +1083,7 @@ export function FocusMode() {
             animate={{ opacity: 1, y: 0 }}
             className="mt-8 p-6 glassmorphism rounded-2xl text-center max-w-2xl mx-auto"
           >
-          </motion.div>
+                     </motion.div>
         )}
       </div>
     </div>

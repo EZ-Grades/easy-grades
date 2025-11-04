@@ -1,3 +1,4 @@
+// Auto-generated types for the new schema
 export type Json =
   | string
   | number
@@ -6,6 +7,15 @@ export type Json =
   | { [key: string]: Json | undefined }
   | Json[]
 
+export type UserRole = 'guest' | 'user' | 'premium' | 'admin'
+export type ThemePreference = 'light' | 'dark' | 'system'
+export type TaskPriority = 'low' | 'medium' | 'high' | 'urgent'
+export type EventType = 'personal' | 'study' | 'break' | 'deadline' | 'exam' | 'meeting'
+export type DifficultyLevel = 'beginner' | 'intermediate' | 'advanced'
+export type SessionStatus = 'active' | 'paused' | 'completed' | 'cancelled'
+export type RoomVisibility = 'public' | 'private' | 'friends_only'
+export type ParticipantStatus = 'online' | 'away' | 'studying' | 'break' | 'offline'
+
 export interface Database {
   public: {
     Tables: {
@@ -13,155 +23,93 @@ export interface Database {
         Row: {
           id: string
           email: string
-          full_name: string | null
           username: string | null
+          full_name: string | null
           avatar_url: string | null
+          bio: string | null
+          role: UserRole
+          theme: ThemePreference
+          timezone: string
           created_at: string
           updated_at: string
+          deleted_at: string | null
+          last_active_at: string | null
+          metadata: Json
         }
         Insert: {
           id: string
           email: string
-          full_name?: string | null
           username?: string | null
+          full_name?: string | null
           avatar_url?: string | null
+          bio?: string | null
+          role?: UserRole
+          theme?: ThemePreference
+          timezone?: string
           created_at?: string
           updated_at?: string
+          deleted_at?: string | null
+          last_active_at?: string | null
+          metadata?: Json
         }
         Update: {
           id?: string
           email?: string
-          full_name?: string | null
           username?: string | null
+          full_name?: string | null
           avatar_url?: string | null
-          created_at?: string
+          bio?: string | null
+          role?: UserRole
+          theme?: ThemePreference
+          timezone?: string
           updated_at?: string
+          deleted_at?: string | null
+          last_active_at?: string | null
+          metadata?: Json
         }
       }
-      chat_history: {
+      user_preferences: {
         Row: {
-          id: string
           user_id: string
-          message: string
-          response: string
-          session_id: string | null
-          message_type: 'user' | 'assistant' | 'system'
-          created_at: string
-        }
-        Insert: {
-          id?: string
-          user_id: string
-          message: string
-          response: string
-          session_id?: string | null
-          message_type?: 'user' | 'assistant' | 'system'
-          created_at?: string
-        }
-        Update: {
-          id?: string
-          user_id?: string
-          message?: string
-          response?: string
-          session_id?: string | null
-          message_type?: 'user' | 'assistant' | 'system'
-          created_at?: string
-        }
-      }
-      ai_chat_sessions: {
-        Row: {
-          id: string
-          user_id: string
-          title: string
-          context_type: 'general' | 'study_help' | 'course_specific' | 'homework_help'
+          default_focus_duration: number
+          default_break_duration: number
+          auto_start_breaks: boolean
+          auto_start_focus: boolean
+          notifications_enabled: boolean
+          email_notifications: boolean
+          sound_enabled: boolean
+          study_goal_hours: number
+          preferred_ambient_sound: string | null
+          dashboard_layout: Json
           created_at: string
           updated_at: string
         }
         Insert: {
-          id?: string
           user_id: string
-          title: string
-          context_type?: 'general' | 'study_help' | 'course_specific' | 'homework_help'
+          default_focus_duration?: number
+          default_break_duration?: number
+          auto_start_breaks?: boolean
+          auto_start_focus?: boolean
+          notifications_enabled?: boolean
+          email_notifications?: boolean
+          sound_enabled?: boolean
+          study_goal_hours?: number
+          preferred_ambient_sound?: string | null
+          dashboard_layout?: Json
           created_at?: string
           updated_at?: string
         }
         Update: {
-          id?: string
-          user_id?: string
-          title?: string
-          context_type?: 'general' | 'study_help' | 'course_specific' | 'homework_help'
-          created_at?: string
-          updated_at?: string
-        }
-      }
-      tracks: {
-        Row: {
-          id: string
-          name: string
-          mood: string
-          genre: string
-          description: string | null
-          url: string
-          cover_url: string | null
-          created_at: string
-        }
-        Insert: {
-          id?: string
-          name: string
-          mood: string
-          genre: string
-          description?: string | null
-          url: string
-          cover_url?: string | null
-          created_at?: string
-        }
-        Update: {
-          id?: string
-          name?: string
-          mood?: string
-          genre?: string
-          description?: string | null
-          url?: string
-          cover_url?: string | null
-          created_at?: string
-        }
-      }
-      user_play_history: {
-        Row: {
-          id: string
-          user_id: string
-          track_id: string
-          played_at: string
-        }
-        Insert: {
-          id?: string
-          user_id: string
-          track_id: string
-          played_at?: string
-        }
-        Update: {
-          id?: string
-          user_id?: string
-          track_id?: string
-          played_at?: string
-        }
-      }
-      user_volume_settings: {
-        Row: {
-          user_id: string
-          master_volume: number
-          ambient_volume: number
-          updated_at: string
-        }
-        Insert: {
-          user_id: string
-          master_volume?: number
-          ambient_volume?: number
-          updated_at?: string
-        }
-        Update: {
-          user_id?: string
-          master_volume?: number
-          ambient_volume?: number
+          default_focus_duration?: number
+          default_break_duration?: number
+          auto_start_breaks?: boolean
+          auto_start_focus?: boolean
+          notifications_enabled?: boolean
+          email_notifications?: boolean
+          sound_enabled?: boolean
+          study_goal_hours?: number
+          preferred_ambient_sound?: string | null
+          dashboard_layout?: Json
           updated_at?: string
         }
       }
@@ -171,74 +119,57 @@ export interface Database {
           user_id: string
           title: string
           description: string | null
-          priority: 'low' | 'medium' | 'high'
-          due_date: string | null
+          priority: TaskPriority
           category: string | null
-          tags: string[] | null
+          tags: string[]
           completed: boolean
+          completed_at: string | null
+          due_date: string | null
+          reminder_at: string | null
+          parent_task_id: string | null
+          order_index: number
+          estimated_duration_minutes: number | null
+          actual_duration_minutes: number | null
           created_at: string
           updated_at: string
+          deleted_at: string | null
         }
         Insert: {
           id?: string
           user_id: string
           title: string
           description?: string | null
-          priority?: 'low' | 'medium' | 'high'
-          due_date?: string | null
+          priority?: TaskPriority
           category?: string | null
-          tags?: string[] | null
+          tags?: string[]
           completed?: boolean
+          completed_at?: string | null
+          due_date?: string | null
+          reminder_at?: string | null
+          parent_task_id?: string | null
+          order_index?: number
+          estimated_duration_minutes?: number | null
+          actual_duration_minutes?: number | null
           created_at?: string
           updated_at?: string
+          deleted_at?: string | null
         }
         Update: {
-          id?: string
-          user_id?: string
           title?: string
           description?: string | null
-          priority?: 'low' | 'medium' | 'high'
-          due_date?: string | null
+          priority?: TaskPriority
           category?: string | null
-          tags?: string[] | null
+          tags?: string[]
           completed?: boolean
-          created_at?: string
+          completed_at?: string | null
+          due_date?: string | null
+          reminder_at?: string | null
+          parent_task_id?: string | null
+          order_index?: number
+          estimated_duration_minutes?: number | null
+          actual_duration_minutes?: number | null
           updated_at?: string
-        }
-      }
-      notes: {
-        Row: {
-          id: string
-          user_id: string
-          title: string
-          content: string | null
-          category_id: string | null
-          tags: string[] | null
-          is_pinned: boolean
-          created_at: string
-          updated_at: string
-        }
-        Insert: {
-          id?: string
-          user_id: string
-          title: string
-          content?: string | null
-          category_id?: string | null
-          tags?: string[] | null
-          is_pinned?: boolean
-          created_at?: string
-          updated_at?: string
-        }
-        Update: {
-          id?: string
-          user_id?: string
-          title?: string
-          content?: string | null
-          category_id?: string | null
-          tags?: string[] | null
-          is_pinned?: boolean
-          created_at?: string
-          updated_at?: string
+          deleted_at?: string | null
         }
       }
       note_categories: {
@@ -259,70 +190,56 @@ export interface Database {
           created_at?: string
         }
         Update: {
-          id?: string
-          user_id?: string
           name?: string
           color?: string | null
           icon?: string | null
-          created_at?: string
         }
       }
-      weekly_goals: {
+      notes: {
         Row: {
           id: string
           user_id: string
-          hours_goal: number
-          progress_hours: number
-          week_start_date: string
+          category_id: string | null
+          title: string
+          content: string | null
+          content_type: string
+          tags: string[]
+          is_pinned: boolean
+          is_favorite: boolean
+          is_public: boolean
+          share_token: string | null
           created_at: string
           updated_at: string
+          deleted_at: string | null
         }
         Insert: {
           id?: string
           user_id: string
-          hours_goal?: number
-          progress_hours?: number
-          week_start_date: string
+          category_id?: string | null
+          title: string
+          content?: string | null
+          content_type?: string
+          tags?: string[]
+          is_pinned?: boolean
+          is_favorite?: boolean
+          is_public?: boolean
+          share_token?: string | null
           created_at?: string
           updated_at?: string
+          deleted_at?: string | null
         }
         Update: {
-          id?: string
-          user_id?: string
-          hours_goal?: number
-          progress_hours?: number
-          week_start_date?: string
-          created_at?: string
+          category_id?: string | null
+          title?: string
+          content?: string | null
+          content_type?: string
+          tags?: string[]
+          is_pinned?: boolean
+          is_favorite?: boolean
+          is_public?: boolean
+          share_token?: string | null
           updated_at?: string
-        }
-      }
-      daily_sessions: {
-        Row: {
-          id: string
-          user_id: string
-          session_date: string
-          completed_sessions: number
-          total_minutes: number
-          created_at: string
-          updated_at: string
-        }
-        Insert: {
-          id?: string
-          user_id: string
-          session_date: string
-          completed_sessions?: number
-          total_minutes?: number
-          created_at?: string
-          updated_at?: string
-        }
-        Update: {
-          id?: string
-          user_id?: string
-          session_date?: string
-          completed_sessions?: number
-          total_minutes?: number
-          created_at?: string
-          updated_at?: string
+          deleted_at?: string | null
         }
       }
       focus_sessions: {
@@ -331,634 +248,148 @@ export interface Database {
           user_id: string
           duration_minutes: number
           completed_minutes: number
-          start_time: string
-          end_time: string | null
+          status: SessionStatus
+          started_at: string
+          paused_at: string | null
+          completed_at: string | null
+          cancelled_at: string | null
           ambience_mode: string | null
           fullscreen: boolean
-          completed: boolean
+          background_id: string | null
+          notes: string | null
+          tags: string[]
           created_at: string
+          updated_at: string
         }
         Insert: {
           id?: string
           user_id: string
           duration_minutes: number
           completed_minutes?: number
-          start_time: string
-          end_time?: string | null
+          status?: SessionStatus
+          started_at?: string
+          paused_at?: string | null
+          completed_at?: string | null
+          cancelled_at?: string | null
           ambience_mode?: string | null
           fullscreen?: boolean
-          completed?: boolean
+          background_id?: string | null
+          notes?: string | null
+          tags?: string[]
           created_at?: string
+          updated_at?: string
         }
         Update: {
-          id?: string
-          user_id?: string
           duration_minutes?: number
           completed_minutes?: number
-          start_time?: string
-          end_time?: string | null
+          status?: SessionStatus
+          paused_at?: string | null
+          completed_at?: string | null
+          cancelled_at?: string | null
           ambience_mode?: string | null
           fullscreen?: boolean
-          completed?: boolean
-          created_at?: string
-        }
-      }
-      ambient_sounds: {
-        Row: {
-          id: string
-          name: string
-          default_volume: number
-          icon: string | null
-          audio_url: string | null
-          created_at: string
-        }
-        Insert: {
-          id?: string
-          name: string
-          default_volume?: number
-          icon?: string | null
-          audio_url?: string | null
-          created_at?: string
-        }
-        Update: {
-          id?: string
-          name?: string
-          default_volume?: number
-          icon?: string | null
-          audio_url?: string | null
-          created_at?: string
-        }
-      }
-      user_ambient_settings: {
-        Row: {
-          id: string
-          user_id: string
-          ambient_sound_id: string
-          enabled: boolean
-          volume: number
-        }
-        Insert: {
-          id?: string
-          user_id: string
-          ambient_sound_id: string
-          enabled?: boolean
-          volume?: number
-        }
-        Update: {
-          id?: string
-          user_id?: string
-          ambient_sound_id?: string
-          enabled?: boolean
-          volume?: number
-        }
-      }
-      blocked_sites: {
-        Row: {
-          id: string
-          user_id: string
-          url: string
-          created_at: string
-        }
-        Insert: {
-          id?: string
-          user_id: string
-          url: string
-          created_at?: string
-        }
-        Update: {
-          id?: string
-          user_id?: string
-          url?: string
-          created_at?: string
-        }
-      }
-      user_settings: {
-        Row: {
-          user_id: string
-          distraction_block_enabled: boolean
-          show_blocked_sites: boolean
-          updated_at: string
-        }
-        Insert: {
-          user_id: string
-          distraction_block_enabled?: boolean
-          show_blocked_sites?: boolean
-          updated_at?: string
-        }
-        Update: {
-          user_id?: string
-          distraction_block_enabled?: boolean
-          show_blocked_sites?: boolean
+          background_id?: string | null
+          notes?: string | null
+          tags?: string[]
           updated_at?: string
         }
       }
-      user_preferences: {
+      daily_stats: {
         Row: {
           user_id: string
-          theme: 'light' | 'dark' | 'system'
-          default_focus_duration: number
-          default_break_duration: number
-          notification_enabled: boolean
-          sound_enabled: boolean
-          auto_start_break: boolean
-          auto_start_focus: boolean
-          preferred_ambient_sound: string | null
-          dashboard_layout: Json | null
+          stat_date: string
+          total_sessions: number
+          completed_sessions: number
+          total_minutes: number
+          focus_minutes: number
+          break_minutes: number
+          goal_achieved: boolean
+          is_active_day: boolean
           created_at: string
           updated_at: string
         }
         Insert: {
           user_id: string
-          theme?: 'light' | 'dark' | 'system'
-          default_focus_duration?: number
-          default_break_duration?: number
-          notification_enabled?: boolean
-          sound_enabled?: boolean
-          auto_start_break?: boolean
-          auto_start_focus?: boolean
-          preferred_ambient_sound?: string | null
-          dashboard_layout?: Json | null
+          stat_date: string
+          total_sessions?: number
+          completed_sessions?: number
+          total_minutes?: number
+          focus_minutes?: number
+          break_minutes?: number
+          goal_achieved?: boolean
+          is_active_day?: boolean
           created_at?: string
           updated_at?: string
         }
         Update: {
-          user_id?: string
-          theme?: 'light' | 'dark' | 'system'
-          default_focus_duration?: number
-          default_break_duration?: number
-          notification_enabled?: boolean
-          sound_enabled?: boolean
-          auto_start_break?: boolean
-          auto_start_focus?: boolean
-          preferred_ambient_sound?: string | null
-          dashboard_layout?: Json | null
-          created_at?: string
+          total_sessions?: number
+          completed_sessions?: number
+          total_minutes?: number
+          focus_minutes?: number
+          break_minutes?: number
+          goal_achieved?: boolean
+          is_active_day?: boolean
           updated_at?: string
         }
       }
-      ambience_modes: {
-        Row: {
-          id: string
-          name: string
-          description: string | null
-          icon: string | null
-          bg_class: string | null
-          created_at: string
-        }
-        Insert: {
-          id?: string
-          name: string
-          description?: string | null
-          icon?: string | null
-          bg_class?: string | null
-          created_at?: string
-        }
-        Update: {
-          id?: string
-          name?: string
-          description?: string | null
-          icon?: string | null
-          bg_class?: string | null
-          created_at?: string
-        }
-      }
-      courses: {
-        Row: {
-          id: string
-          title: string
-          description: string | null
-          category: string
-          difficulty: 'beginner' | 'intermediate' | 'advanced'
-          duration_hours: number
-          icon: string | null
-          color: string | null
-          is_featured: boolean
-          created_at: string
-          updated_at: string
-        }
-        Insert: {
-          id?: string
-          title: string
-          description?: string | null
-          category: string
-          difficulty: 'beginner' | 'intermediate' | 'advanced'
-          duration_hours?: number
-          icon?: string | null
-          color?: string | null
-          is_featured?: boolean
-          created_at?: string
-          updated_at?: string
-        }
-        Update: {
-          id?: string
-          title?: string
-          description?: string | null
-          category?: string
-          difficulty?: 'beginner' | 'intermediate' | 'advanced'
-          duration_hours?: number
-          icon?: string | null
-          color?: string | null
-          is_featured?: boolean
-          created_at?: string
-          updated_at?: string
-        }
-      }
-      certifications: {
-        Row: {
-          id: string
-          title: string
-          description: string | null
-          category: string
-          difficulty: 'beginner' | 'intermediate' | 'advanced'
-          progress_percentage: number
-          icon: string | null
-          color: string | null
-          is_featured: boolean
-          created_at: string
-          updated_at: string
-        }
-        Insert: {
-          id?: string
-          title: string
-          description?: string | null
-          category: string
-          difficulty: 'beginner' | 'intermediate' | 'advanced'
-          progress_percentage?: number
-          icon?: string | null
-          color?: string | null
-          is_featured?: boolean
-          created_at?: string
-          updated_at?: string
-        }
-        Update: {
-          id?: string
-          title?: string
-          description?: string | null
-          category?: string
-          difficulty?: 'beginner' | 'intermediate' | 'advanced'
-          progress_percentage?: number
-          icon?: string | null
-          color?: string | null
-          is_featured?: boolean
-          created_at?: string
-          updated_at?: string
-        }
-      }
-      learning_paths: {
-        Row: {
-          id: string
-          title: string
-          description: string | null
-          category: string
-          estimated_duration_hours: number
-          difficulty: 'beginner' | 'intermediate' | 'advanced'
-          icon: string | null
-          color: string | null
-          is_featured: boolean
-          created_at: string
-          updated_at: string
-        }
-        Insert: {
-          id?: string
-          title: string
-          description?: string | null
-          category: string
-          estimated_duration_hours?: number
-          difficulty: 'beginner' | 'intermediate' | 'advanced'
-          icon?: string | null
-          color?: string | null
-          is_featured?: boolean
-          created_at?: string
-          updated_at?: string
-        }
-        Update: {
-          id?: string
-          title?: string
-          description?: string | null
-          category?: string
-          estimated_duration_hours?: number
-          difficulty?: 'beginner' | 'intermediate' | 'advanced'
-          icon?: string | null
-          color?: string | null
-          is_featured?: boolean
-          created_at?: string
-          updated_at?: string
-        }
-      }
-      user_course_enrollments: {
+      weekly_goals: {
         Row: {
           id: string
           user_id: string
-          course_id: string
-          progress_percentage: number
-          completed_at: string | null
-          enrolled_at: string
-        }
-        Insert: {
-          id?: string
-          user_id: string
-          course_id: string
-          progress_percentage?: number
-          completed_at?: string | null
-          enrolled_at?: string
-        }
-        Update: {
-          id?: string
-          user_id?: string
-          course_id?: string
-          progress_percentage?: number
-          completed_at?: string | null
-          enrolled_at?: string
-        }
-      }
-      user_certification_progress: {
-        Row: {
-          id: string
-          user_id: string
-          certification_id: string
-          progress_percentage: number
-          completed_at: string | null
-          started_at: string
-        }
-        Insert: {
-          id?: string
-          user_id: string
-          certification_id: string
-          progress_percentage?: number
-          completed_at?: string | null
-          started_at?: string
-        }
-        Update: {
-          id?: string
-          user_id?: string
-          certification_id?: string
-          progress_percentage?: number
-          completed_at?: string | null
-          started_at?: string
-        }
-      }
-      learning_path_courses: {
-        Row: {
-          id: string
-          learning_path_id: string
-          course_id: string
-          order_index: number
-        }
-        Insert: {
-          id?: string
-          learning_path_id: string
-          course_id: string
-          order_index: number
-        }
-        Update: {
-          id?: string
-          learning_path_id?: string
-          course_id?: string
-          order_index?: number
-        }
-      }
-      user_learning_path_enrollments: {
-        Row: {
-          id: string
-          user_id: string
-          learning_path_id: string
-          progress_percentage: number
-          completed_at: string | null
-          enrolled_at: string
-        }
-        Insert: {
-          id?: string
-          user_id: string
-          learning_path_id: string
-          progress_percentage?: number
-          completed_at?: string | null
-          enrolled_at?: string
-        }
-        Update: {
-          id?: string
-          user_id?: string
-          learning_path_id?: string
-          progress_percentage?: number
-          completed_at?: string | null
-          enrolled_at?: string
-        }
-      }
-      study_rooms: {
-        Row: {
-          id: string
-          name: string
-          description: string | null
-          room_code: string
-          host_user_id: string
-          max_participants: number
-          is_public: boolean
-          password_hash: string | null
-          focus_mode: string
-          ambient_sound: string | null
-          created_at: string
-          updated_at: string
-        }
-        Insert: {
-          id?: string
-          name: string
-          description?: string | null
-          room_code: string
-          host_user_id: string
-          max_participants?: number
-          is_public?: boolean
-          password_hash?: string | null
-          focus_mode?: string
-          ambient_sound?: string | null
-          created_at?: string
-          updated_at?: string
-        }
-        Update: {
-          id?: string
-          name?: string
-          description?: string | null
-          room_code?: string
-          host_user_id?: string
-          max_participants?: number
-          is_public?: boolean
-          password_hash?: string | null
-          focus_mode?: string
-          ambient_sound?: string | null
-          created_at?: string
-          updated_at?: string
-        }
-      }
-      room_participants: {
-        Row: {
-          id: string
-          room_id: string
-          user_id: string
-          joined_at: string
-          left_at: string | null
-          status: 'studying' | 'break' | 'away'
-          study_time_minutes: number
-        }
-        Insert: {
-          id?: string
-          room_id: string
-          user_id: string
-          joined_at?: string
-          left_at?: string | null
-          status?: 'studying' | 'break' | 'away'
-          study_time_minutes?: number
-        }
-        Update: {
-          id?: string
-          room_id?: string
-          user_id?: string
-          joined_at?: string
-          left_at?: string | null
-          status?: 'studying' | 'break' | 'away'
-          study_time_minutes?: number
-        }
-      }
-      room_chat_messages: {
-        Row: {
-          id: string
-          room_id: string
-          user_id: string
-          message: string
-          message_type: 'text' | 'system' | 'emoji_reaction'
-          created_at: string
-        }
-        Insert: {
-          id?: string
-          room_id: string
-          user_id: string
-          message: string
-          message_type?: 'text' | 'system' | 'emoji_reaction'
-          created_at?: string
-        }
-        Update: {
-          id?: string
-          room_id?: string
-          user_id?: string
-          message?: string
-          message_type?: 'text' | 'system' | 'emoji_reaction'
-          created_at?: string
-        }
-      }
-      canvas_sessions: {
-        Row: {
-          id: string
-          room_id: string
-          canvas_data: Json | null
-          created_by: string
-          created_at: string
-          updated_at: string
-        }
-        Insert: {
-          id?: string
-          room_id: string
-          canvas_data?: Json | null
-          created_by: string
-          created_at?: string
-          updated_at?: string
-        }
-        Update: {
-          id?: string
-          room_id?: string
-          canvas_data?: Json | null
-          created_by?: string
-          created_at?: string
-          updated_at?: string
-        }
-      }
-      canvas_strokes: {
-        Row: {
-          id: string
-          canvas_session_id: string
-          user_id: string
-          stroke_data: Json
-          created_at: string
-        }
-        Insert: {
-          id?: string
-          canvas_session_id: string
-          user_id: string
-          stroke_data: Json
-          created_at?: string
-        }
-        Update: {
-          id?: string
-          canvas_session_id?: string
-          user_id?: string
-          stroke_data?: Json
-          created_at?: string
-        }
-      }
-      calendar_events: {
-        Row: {
-          id: string
-          user_id: string
-          title: string
-          description: string | null
-          start_time: string
-          end_time: string
-          event_type: 'personal' | 'study' | 'break' | 'deadline' | 'exam'
-          color: string | null
-          reminder_minutes: number
-          is_all_day: boolean
-          recurrence_rule: string | null
+          week_start_date: string
+          target_hours: number
+          achieved_hours: number
+          is_achieved: boolean
           created_at: string
           updated_at: string
         }
         Insert: {
           id?: string
           user_id: string
-          title: string
-          description?: string | null
-          start_time: string
-          end_time: string
-          event_type?: 'personal' | 'study' | 'break' | 'deadline' | 'exam'
-          color?: string | null
-          reminder_minutes?: number
-          is_all_day?: boolean
-          recurrence_rule?: string | null
+          week_start_date: string
+          target_hours?: number
+          achieved_hours?: number
+          is_achieved?: boolean
           created_at?: string
           updated_at?: string
         }
         Update: {
-          id?: string
-          user_id?: string
-          title?: string
-          description?: string | null
-          start_time?: string
-          end_time?: string
-          event_type?: 'personal' | 'study' | 'break' | 'deadline' | 'exam'
-          color?: string | null
-          reminder_minutes?: number
-          is_all_day?: boolean
-          recurrence_rule?: string | null
-          created_at?: string
+          target_hours?: number
+          achieved_hours?: number
+          is_achieved?: boolean
           updated_at?: string
         }
       }
-      calendar_reminders: {
+      journal_entries: {
         Row: {
           id: string
-          event_id: string
-          reminder_time: string
-          sent: boolean
+          user_id: string
+          session_id: string | null
+          content: string | null
+          mood: string | null
+          decorations: Json
           created_at: string
+          updated_at: string
+          deleted_at: string | null
         }
         Insert: {
           id?: string
-          event_id: string
-          reminder_time: string
-          sent?: boolean
+          user_id: string
+          session_id?: string | null
+          content?: string | null
+          mood?: string | null
+          decorations?: Json
           created_at?: string
+          updated_at?: string
+          deleted_at?: string | null
         }
         Update: {
-          id?: string
-          event_id?: string
-          reminder_time?: string
-          sent?: boolean
-          created_at?: string
+          session_id?: string | null
+          content?: string | null
+          mood?: string | null
+          decorations?: Json
+          updated_at?: string
+          deleted_at?: string | null
         }
       }
       custom_backgrounds: {
@@ -979,12 +410,663 @@ export interface Database {
           created_at?: string
         }
         Update: {
-          id?: string
-          user_id?: string
           name?: string
           image_url?: string
           is_default?: boolean
+        }
+      }
+      calendar_events: {
+        Row: {
+          id: string
+          user_id: string
+          title: string
+          description: string | null
+          location: string | null
+          event_type: EventType
+          color: string | null
+          start_time: string
+          end_time: string
+          is_all_day: boolean
+          timezone: string | null
+          recurrence_rule: string | null
+          recurrence_exception_dates: string[] | null
+          reminder_minutes: number[]
+          metadata: Json
+          created_at: string
+          updated_at: string
+          deleted_at: string | null
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          title: string
+          description?: string | null
+          location?: string | null
+          event_type?: EventType
+          color?: string | null
+          start_time: string
+          end_time: string
+          is_all_day?: boolean
+          timezone?: string | null
+          recurrence_rule?: string | null
+          recurrence_exception_dates?: string[] | null
+          is_completed?: boolean
+          completed_at?: string | null
+          reminder_minutes?: number[]
+          metadata?: Json
           created_at?: string
+          updated_at?: string
+          deleted_at?: string | null
+        }
+        Update: {
+          title?: string
+          description?: string | null
+          location?: string | null
+          event_type?: EventType
+          color?: string | null
+          start_time?: string
+          end_time?: string
+          is_all_day?: boolean
+          timezone?: string | null
+          recurrence_rule?: string | null
+          recurrence_exception_dates?: string[] | null
+          is_completed?: boolean
+          completed_at?: string | null
+          reminder_minutes?: number[]
+          metadata?: Json
+          updated_at?: string
+          deleted_at?: string | null
+        }
+      }
+      tracks: {
+        Row: {
+          id: string
+          title: string
+          artist: string | null
+          album: string | null
+          mood: string
+          genre: string
+          url: string
+          cover_url: string | null
+          duration_seconds: number | null
+          track_type: string
+          is_active: boolean
+          is_premium: boolean
+          metadata: Json
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          title: string
+          artist?: string | null
+          album?: string | null
+          mood: string
+          genre: string
+          url: string
+          cover_url?: string | null
+          duration_seconds?: number | null
+          track_type?: string
+          is_active?: boolean
+          is_premium?: boolean
+          metadata?: Json
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          title?: string
+          artist?: string | null
+          album?: string | null
+          mood?: string
+          genre?: string
+          url?: string
+          cover_url?: string | null
+          duration_seconds?: number | null
+          track_type?: string
+          is_active?: boolean
+          is_premium?: boolean
+          metadata?: Json
+          updated_at?: string
+        }
+      }
+      ambient_sounds: {
+        Row: {
+          id: string
+          name: string
+          icon: string | null
+          audio_url: string
+          default_volume: number
+          is_active: boolean
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          name: string
+          icon?: string | null
+          audio_url: string
+          default_volume?: number
+          is_active?: boolean
+          created_at?: string
+        }
+        Update: {
+          name?: string
+          icon?: string | null
+          audio_url?: string
+          default_volume?: number
+          is_active?: boolean
+        }
+      }
+      user_sound_settings: {
+        Row: {
+          id: string
+          user_id: string
+          ambient_sound_id: string
+          enabled: boolean
+          volume: number
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          ambient_sound_id: string
+          enabled?: boolean
+          volume?: number
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          enabled?: boolean
+          volume?: number
+          updated_at?: string
+        }
+      }
+      playback_state: {
+        Row: {
+          user_id: string
+          track_id: string | null
+          position_seconds: number
+          volume: number
+          is_playing: boolean
+          repeat_mode: string
+          shuffle: boolean
+          queue: Json
+          updated_at: string
+        }
+        Insert: {
+          user_id: string
+          track_id?: string | null
+          position_seconds?: number
+          volume?: number
+          is_playing?: boolean
+          repeat_mode?: string
+          shuffle?: boolean
+          queue?: Json
+          updated_at?: string
+        }
+        Update: {
+          track_id?: string | null
+          position_seconds?: number
+          volume?: number
+          is_playing?: boolean
+          repeat_mode?: string
+          shuffle?: boolean
+          queue?: Json
+          updated_at?: string
+        }
+      }
+      inspirations: {
+        Row: {
+          id: string
+          quote: string
+          author: string | null
+          category: string
+          is_active: boolean
+          display_order: number | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          quote: string
+          author?: string | null
+          category: string
+          is_active?: boolean
+          display_order?: number | null
+          created_at?: string
+        }
+        Update: {
+          quote?: string
+          author?: string | null
+          category?: string
+          is_active?: boolean
+          display_order?: number | null
+        }
+      }
+      courses: {
+        Row: {
+          id: string
+          title: string
+          description: string | null
+          category: string
+          difficulty: DifficultyLevel
+          duration_hours: number | null
+          icon: string | null
+          color: string | null
+          thumbnail_url: string | null
+          is_published: boolean
+          is_featured: boolean
+          syllabus: Json
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          title: string
+          description?: string | null
+          category: string
+          difficulty: DifficultyLevel
+          duration_hours?: number | null
+          icon?: string | null
+          color?: string | null
+          thumbnail_url?: string | null
+          is_published?: boolean
+          is_featured?: boolean
+          syllabus?: Json
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          title?: string
+          description?: string | null
+          category?: string
+          difficulty?: DifficultyLevel
+          duration_hours?: number | null
+          icon?: string | null
+          color?: string | null
+          thumbnail_url?: string | null
+          is_published?: boolean
+          is_featured?: boolean
+          syllabus?: Json
+          updated_at?: string
+        }
+      }
+      certifications: {
+        Row: {
+          id: string
+          name: string
+          provider: string | null
+          description: string | null
+          category: string
+          difficulty: DifficultyLevel
+          total_questions: number
+          passing_percentage: number
+          time_limit_minutes: number | null
+          icon: string | null
+          color: string | null
+          is_active: boolean
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          name: string
+          provider?: string | null
+          description?: string | null
+          category: string
+          difficulty: DifficultyLevel
+          total_questions?: number
+          passing_percentage?: number
+          time_limit_minutes?: number | null
+          icon?: string | null
+          color?: string | null
+          is_active?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          name?: string
+          provider?: string | null
+          description?: string | null
+          category?: string
+          difficulty?: DifficultyLevel
+          total_questions?: number
+          passing_percentage?: number
+          time_limit_minutes?: number | null
+          icon?: string | null
+          color?: string | null
+          is_active?: boolean
+          updated_at?: string
+        }
+      }
+      exam_questions: {
+        Row: {
+          id: string
+          certification_id: string
+          question: string
+          option_a: string
+          option_b: string
+          option_c: string
+          option_d: string
+          correct_answer: string
+          explanation: string
+          difficulty: DifficultyLevel
+          tags: string[]
+          question_number: number | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          certification_id: string
+          question: string
+          option_a: string
+          option_b: string
+          option_c: string
+          option_d: string
+          correct_answer: string
+          explanation: string
+          difficulty: DifficultyLevel
+          tags?: string[]
+          question_number?: number | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          question?: string
+          option_a?: string
+          option_b?: string
+          option_c?: string
+          option_d?: string
+          correct_answer?: string
+          explanation?: string
+          difficulty?: DifficultyLevel
+          tags?: string[]
+          question_number?: number | null
+          updated_at?: string
+        }
+      }
+      flashcard_decks: {
+        Row: {
+          id: string
+          certification_id: string | null
+          created_by: string | null
+          title: string
+          description: string | null
+          category: string | null
+          is_public: boolean
+          card_count: number
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          certification_id?: string | null
+          created_by?: string | null
+          title: string
+          description?: string | null
+          category?: string | null
+          is_public?: boolean
+          card_count?: number
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          title?: string
+          description?: string | null
+          category?: string | null
+          is_public?: boolean
+          card_count?: number
+          updated_at?: string
+        }
+      }
+      flashcards: {
+        Row: {
+          id: string
+          deck_id: string
+          question: string
+          answer: string
+          hint: string | null
+          difficulty: DifficultyLevel | null
+          tags: string[]
+          order_index: number
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          deck_id: string
+          question: string
+          answer: string
+          hint?: string | null
+          difficulty?: DifficultyLevel | null
+          tags?: string[]
+          order_index?: number
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          question?: string
+          answer?: string
+          hint?: string | null
+          difficulty?: DifficultyLevel | null
+          tags?: string[]
+          order_index?: number
+          updated_at?: string
+        }
+      }
+      course_enrollments: {
+        Row: {
+          id: string
+          user_id: string
+          course_id: string
+          progress_percentage: number
+          current_module: number | null
+          status: string
+          enrolled_at: string
+          started_at: string | null
+          completed_at: string | null
+          last_accessed_at: string | null
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          course_id: string
+          progress_percentage?: number
+          current_module?: number | null
+          status?: string
+          enrolled_at?: string
+          started_at?: string | null
+          completed_at?: string | null
+          last_accessed_at?: string | null
+        }
+        Update: {
+          progress_percentage?: number
+          current_module?: number | null
+          status?: string
+          started_at?: string | null
+          completed_at?: string | null
+          last_accessed_at?: string | null
+        }
+      }
+      practice_sessions: {
+        Row: {
+          id: string
+          user_id: string
+          certification_id: string | null
+          questions_attempted: number
+          questions_correct: number
+          score_percentage: number | null
+          time_spent_seconds: number
+          results: Json
+          started_at: string
+          completed_at: string | null
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          certification_id?: string | null
+          questions_attempted?: number
+          questions_correct?: number
+          score_percentage?: number | null
+          time_spent_seconds?: number
+          results?: Json
+          started_at?: string
+          completed_at?: string | null
+        }
+        Update: {
+          questions_attempted?: number
+          questions_correct?: number
+          score_percentage?: number | null
+          time_spent_seconds?: number
+          results?: Json
+          completed_at?: string | null
+        }
+      }
+      chat_history: {
+        Row: {
+          id: string
+          user_id: string
+          message: string
+          response: string
+          context: Json
+          model: string | null
+          tokens_used: number | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          message: string
+          response: string
+          context?: Json
+          model?: string | null
+          tokens_used?: number | null
+          created_at?: string
+        }
+        Update: {
+          message?: string
+          response?: string
+          context?: Json
+          model?: string | null
+          tokens_used?: number | null
+        }
+      }
+      study_rooms: {
+        Row: {
+          id: string
+          host_user_id: string
+          name: string
+          description: string | null
+          room_code: string
+          visibility: RoomVisibility
+          max_participants: number
+          password_hash: string | null
+          theme: string
+          is_active: boolean
+          created_at: string
+          updated_at: string
+          closed_at: string | null
+        }
+        Insert: {
+          id?: string
+          host_user_id: string
+          name: string
+          description?: string | null
+          room_code: string
+          visibility?: RoomVisibility
+          max_participants?: number
+          password_hash?: string | null
+          theme?: string
+          is_active?: boolean
+          created_at?: string
+          updated_at?: string
+          closed_at?: string | null
+        }
+        Update: {
+          name?: string
+          description?: string | null
+          visibility?: RoomVisibility
+          max_participants?: number
+          password_hash?: string | null
+          theme?: string
+          is_active?: boolean
+          updated_at?: string
+          closed_at?: string | null
+        }
+      }
+      room_participants: {
+        Row: {
+          id: string
+          room_id: string
+          user_id: string
+          status: ParticipantStatus
+          study_time_minutes: number
+          joined_at: string
+          left_at: string | null
+          last_seen_at: string
+        }
+        Insert: {
+          id?: string
+          room_id: string
+          user_id: string
+          status?: ParticipantStatus
+          study_time_minutes?: number
+          joined_at?: string
+          left_at?: string | null
+          last_seen_at?: string
+        }
+        Update: {
+          status?: ParticipantStatus
+          study_time_minutes?: number
+          left_at?: string | null
+          last_seen_at?: string
+        }
+      }
+      room_messages: {
+        Row: {
+          id: string
+          room_id: string
+          user_id: string
+          message: string
+          message_type: string
+          reply_to_id: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          room_id: string
+          user_id: string
+          message: string
+          message_type?: string
+          reply_to_id?: string | null
+          created_at?: string
+        }
+        Update: {
+          message?: string
+          message_type?: string
+          reply_to_id?: string | null
+        }
+      }
+      canvas_sessions: {
+        Row: {
+          id: string
+          room_id: string
+          created_by: string
+          canvas_data: Json
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          room_id: string
+          created_by: string
+          canvas_data?: Json
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          canvas_data?: Json
+          updated_at?: string
         }
       }
       achievements: {
@@ -993,11 +1075,13 @@ export interface Database {
           name: string
           description: string
           category: string
+          requirement_type: string
+          requirement_value: number
+          points: number
           icon: string | null
           badge_color: string | null
-          requirement_type: 'focus_time' | 'sessions_completed' | 'streak_days' | 'courses_completed' | 'certifications_earned'
-          requirement_value: number
-          points_reward: number
+          rarity: string | null
+          is_active: boolean
           created_at: string
         }
         Insert: {
@@ -1005,24 +1089,26 @@ export interface Database {
           name: string
           description: string
           category: string
+          requirement_type: string
+          requirement_value: number
+          points?: number
           icon?: string | null
           badge_color?: string | null
-          requirement_type: 'focus_time' | 'sessions_completed' | 'streak_days' | 'courses_completed' | 'certifications_earned'
-          requirement_value: number
-          points_reward?: number
+          rarity?: string | null
+          is_active?: boolean
           created_at?: string
         }
         Update: {
-          id?: string
           name?: string
           description?: string
           category?: string
+          requirement_type?: string
+          requirement_value?: number
+          points?: number
           icon?: string | null
           badge_color?: string | null
-          requirement_type?: 'focus_time' | 'sessions_completed' | 'streak_days' | 'courses_completed' | 'certifications_earned'
-          requirement_value?: number
-          points_reward?: number
-          created_at?: string
+          rarity?: string | null
+          is_active?: boolean
         }
       }
       user_achievements: {
@@ -1030,19 +1116,22 @@ export interface Database {
           id: string
           user_id: string
           achievement_id: string
-          earned_at: string
+          current_progress: number
+          is_unlocked: boolean
+          unlocked_at: string | null
         }
         Insert: {
           id?: string
           user_id: string
           achievement_id: string
-          earned_at?: string
+          current_progress?: number
+          is_unlocked?: boolean
+          unlocked_at?: string | null
         }
         Update: {
-          id?: string
-          user_id?: string
-          achievement_id?: string
-          earned_at?: string
+          current_progress?: number
+          is_unlocked?: boolean
+          unlocked_at?: string | null
         }
       }
       user_stats: {
@@ -1052,11 +1141,12 @@ export interface Database {
           total_sessions: number
           current_streak_days: number
           longest_streak_days: number
+          last_activity_date: string | null
           courses_completed: number
           certifications_earned: number
           total_points: number
-          last_activity_date: string | null
-          created_at: string
+          level: number
+          global_rank: number | null
           updated_at: string
         }
         Insert: {
@@ -1065,159 +1155,39 @@ export interface Database {
           total_sessions?: number
           current_streak_days?: number
           longest_streak_days?: number
+          last_activity_date?: string | null
           courses_completed?: number
           certifications_earned?: number
           total_points?: number
-          last_activity_date?: string | null
-          created_at?: string
+          level?: number
+          global_rank?: number | null
           updated_at?: string
         }
         Update: {
-          user_id?: string
           total_focus_minutes?: number
           total_sessions?: number
           current_streak_days?: number
           longest_streak_days?: number
+          last_activity_date?: string | null
           courses_completed?: number
           certifications_earned?: number
           total_points?: number
-          last_activity_date?: string | null
-          created_at?: string
+          level?: number
+          global_rank?: number | null
           updated_at?: string
         }
       }
-      file_uploads: {
-        Row: {
-          id: string
-          user_id: string
-          file_name: string
-          file_type: string
-          file_size: number
-          storage_path: string
-          upload_context: 'profile_avatar' | 'custom_background' | 'note_attachment' | 'canvas_save'
-          created_at: string
-        }
-        Insert: {
-          id?: string
-          user_id: string
-          file_name: string
-          file_type: string
-          file_size: number
-          storage_path: string
-          upload_context: 'profile_avatar' | 'custom_background' | 'note_attachment' | 'canvas_save'
-          created_at?: string
-        }
-        Update: {
-          id?: string
-          user_id?: string
-          file_name?: string
-          file_type?: string
-          file_size?: number
-          storage_path?: string
-          upload_context?: 'profile_avatar' | 'custom_background' | 'note_attachment' | 'canvas_save'
-          created_at?: string
-        }
-      }
-    }
-    Views: {
-      [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
-    }
-    Enums: {
-      [_ in never]: never
-    }
-    CompositeTypes: {
-      [_ in never]: never
+      get_daily_inspiration: {
+        Args: Record<string, never>
+        Returns: {
+          id: string
+          quote: string
+          author: string | null
+          category: string
+        }[]
+      }
     }
   }
-}
-
-// Additional types for common operations
-export type TrackMood = 'calm' | 'focus' | 'energizing';
-export type TrackGenre = 'lofi' | 'classical' | 'ambient' | 'electronic';
-export type TaskPriority = 'low' | 'medium' | 'high';
-export type Difficulty = 'beginner' | 'intermediate' | 'advanced';
-export type EventType = 'personal' | 'study' | 'break' | 'deadline' | 'exam';
-export type ParticipantStatus = 'studying' | 'break' | 'away';
-export type MessageType = 'text' | 'system' | 'emoji_reaction';
-export type RequirementType = 'focus_time' | 'sessions_completed' | 'streak_days' | 'courses_completed' | 'certifications_earned';
-export type UploadContext = 'profile_avatar' | 'custom_background' | 'note_attachment' | 'canvas_save';
-
-export interface TrackWithPlayHistory extends Database['public']['Tables']['tracks']['Row'] {
-  play_count?: number;
-  last_played?: string;
-}
-
-export interface TaskStats {
-  total: number;
-  completed: number;
-  percentage: number;
-}
-
-export interface WeeklyStats {
-  sessions: Database['public']['Tables']['daily_sessions']['Row'][];
-  totalSessions: number;
-  totalMinutes: number;
-  totalHours: number;
-}
-
-export interface FocusSessionStats {
-  totalSessions: number;
-  totalFocusTime: number;
-  fullscreenSessions: number;
-  currentStreak: number;
-  totalHours: number;
-}
-
-export interface UserAmbientSettingWithSound extends Database['public']['Tables']['user_ambient_settings']['Row'] {
-  ambient_sounds: Database['public']['Tables']['ambient_sounds']['Row'];
-}
-
-export interface UserPlayHistoryWithTrack extends Database['public']['Tables']['user_play_history']['Row'] {
-  tracks: Database['public']['Tables']['tracks']['Row'];
-}
-
-export interface CourseWithProgress extends Database['public']['Tables']['courses']['Row'] {
-  user_course_enrollments?: Database['public']['Tables']['user_course_enrollments']['Row'];
-}
-
-export interface CertificationWithProgress extends Database['public']['Tables']['certifications']['Row'] {
-  user_certification_progress?: Database['public']['Tables']['user_certification_progress']['Row'];
-}
-
-export interface LearningPathWithProgress extends Database['public']['Tables']['learning_paths']['Row'] {
-  user_learning_path_enrollments?: Database['public']['Tables']['user_learning_path_enrollments']['Row'];
-  learning_path_courses?: Array<{
-    course_id: string;
-    order_index: number;
-    courses: Database['public']['Tables']['courses']['Row'];
-  }>;
-}
-
-export interface StudyRoomWithParticipants extends Database['public']['Tables']['study_rooms']['Row'] {
-  room_participants: Array<Database['public']['Tables']['room_participants']['Row'] & {
-    profiles: Database['public']['Tables']['profiles']['Row'];
-  }>;
-  participant_count?: number;
-}
-
-export interface CalendarEventWithReminders extends Database['public']['Tables']['calendar_events']['Row'] {
-  calendar_reminders?: Database['public']['Tables']['calendar_reminders']['Row'][];
-}
-
-export interface UserWithStats extends Database['public']['Tables']['profiles']['Row'] {
-  user_stats?: Database['public']['Tables']['user_stats']['Row'];
-  user_achievements?: Array<Database['public']['Tables']['user_achievements']['Row'] & {
-    achievements: Database['public']['Tables']['achievements']['Row'];
-  }>;
-}
-
-export interface ChatSessionWithMessages extends Database['public']['Tables']['ai_chat_sessions']['Row'] {
-  chat_history: Database['public']['Tables']['chat_history']['Row'][];
-}
-
-export interface NoteWithCategory extends Database['public']['Tables']['notes']['Row'] {
-  note_categories?: Database['public']['Tables']['note_categories']['Row'];
 }

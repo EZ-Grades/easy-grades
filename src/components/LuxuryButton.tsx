@@ -42,7 +42,7 @@ export function LuxuryButton({
       focus:ring-secondary-500 border-none
     `,
     highlight: `
-      gradient-highlight text-gray-900 shadow-lg hover:shadow-xl hover:glow-highlight
+      gradient-highlight text-foreground shadow-lg hover:shadow-xl hover:glow-highlight
       focus:ring-highlight-500 border-none
     `,
     glass: `

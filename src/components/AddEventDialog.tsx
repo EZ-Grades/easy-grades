@@ -42,8 +42,11 @@ import { Label } from './ui/label';
 import { Textarea } from './ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger } from './ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
-import { toast } from 'sonner@2.0.3';
+import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
+import { Calendar } from './ui/calendar';
+import { toast } from 'sonner';
 import { createCalendarEvent, CalendarEventInsert } from '../services/calendarService';
+import { format } from 'date-fns';
 
 // Icon mapping for event types - All requested icons
 const ICON_OPTIONS = [
@@ -93,10 +96,8 @@ export function AddEventDialog({ onEventCreated, defaultDate, triggerButton }: A
   // Form state
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
-  const [startDate, setStartDate] = useState('');
-  const [startTime, setStartTime] = useState('');
-  const [endDate, setEndDate] = useState('');
-  const [endTime, setEndTime] = useState('');
+  const [startDate, setStartDate] = useState<Date | undefined>(undefined);
+  const [endDate, setEndDate] = useState<Date | undefined>(undefined);
   const [eventType, setEventType] = useState<CalendarEventInsert['event_type']>('other');
   const [selectedIcon, setSelectedIcon] = useState('sparkles');
   const [priority, setPriority] = useState<'low' | 'medium' | 'high'>('medium');
@@ -106,13 +107,8 @@ export function AddEventDialog({ onEventCreated, defaultDate, triggerButton }: A
     setOpen(isOpen);
     
     if (isOpen && defaultDate) {
-      // Format date in local timezone to avoid date shifting
-      const year = defaultDate.getFullYear();
-      const month = String(defaultDate.getMonth() + 1).padStart(2, '0');
-      const day = String(defaultDate.getDate()).padStart(2, '0');
-      const dateStr = `${year}-${month}-${day}`;
-      setStartDate(dateStr);
-      setEndDate(dateStr);
+      setStartDate(defaultDate);
+      setEndDate(defaultDate);
     }
   };
 
@@ -128,24 +124,19 @@ export function AddEventDialog({ onEventCreated, defaultDate, triggerButton }: A
       newErrors.startDate = 'Start date is required';
     }
 
-    if (!startTime) {
-      newErrors.startTime = 'Start time is required';
-    }
-
     if (!endDate) {
       newErrors.endDate = 'End date is required';
     }
 
-    if (!endTime) {
-      newErrors.endTime = 'End time is required';
-    }
+    if (startDate && endDate) {
+      // Reset time to start of day for comparison
+      const start = new Date(startDate);
+      start.setHours(0, 0, 0, 0);
+      const end = new Date(endDate);
+      end.setHours(0, 0, 0, 0);
 
-    if (startDate && startTime && endDate && endTime) {
-      const startDateTime = new Date(`${startDate}T${startTime}`);
-      const endDateTime = new Date(`${endDate}T${endTime}`);
-
-      if (endDateTime <= startDateTime) {
-        newErrors.endTime = 'End time must be after start time';
+      if (end < start) {
+        newErrors.endDate = 'End date must be on or after start date';
       }
     }
 
@@ -166,10 +157,12 @@ export function AddEventDialog({ onEventCreated, defaultDate, triggerButton }: A
     setErrors({});
 
     try {
-      const startDateTime = new Date(`${startDate}T${startTime}`);
-      const endDateTime = new Date(`${endDate}T${endTime}`);
-
-      const iconOption = ICON_OPTIONS.find(opt => opt.value === selectedIcon);
+      // Set start time to 9:00 AM and end time to 10:00 AM by default
+      const startDateTime = new Date(startDate!);
+      startDateTime.setHours(9, 0, 0, 0);
+      
+      const endDateTime = new Date(endDate!);
+      endDateTime.setHours(10, 0, 0, 0);
 
       const eventData: CalendarEventInsert = {
         title: title.trim(),
@@ -177,8 +170,6 @@ export function AddEventDialog({ onEventCreated, defaultDate, triggerButton }: A
         start_time: startDateTime.toISOString(),
         end_time: endDateTime.toISOString(),
         event_type: eventType,
-        icon: selectedIcon,
-        color_hex: iconOption?.color,
         priority,
       };
 
@@ -205,10 +196,8 @@ export function AddEventDialog({ onEventCreated, defaultDate, triggerButton }: A
   const resetForm = () => {
     setTitle('');
     setDescription('');
-    setStartDate('');
-    setStartTime('');
-    setEndDate('');
-    setEndTime('');
+    setStartDate(undefined);
+    setEndDate(undefined);
     setEventType('other');
     setSelectedIcon('sparkles');
     setPriority('medium');
@@ -227,7 +216,7 @@ export function AddEventDialog({ onEventCreated, defaultDate, triggerButton }: A
           </Button>
         )}
       </DialogTrigger>
-      <DialogContent className="glassmorphism max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="dialog-glassmorphism max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <CalendarIcon className="w-5 h-5" />
@@ -310,25 +299,41 @@ export function AddEventDialog({ onEventCreated, defaultDate, triggerButton }: A
             </div>
           </div>
 
-          {/* Start Date & Time */}
+          {/* Date Selection */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Start Date */}
             <div className="space-y-2">
-              <Label htmlFor="start-date">
+              <Label>
                 Start Date <span className="text-error-solid">*</span>
               </Label>
-              <Input
-                id="start-date"
-                type="date"
-                value={startDate}
-                onChange={(e) => {
-                  setStartDate(e.target.value);
-                  if (errors.startDate) setErrors({ ...errors, startDate: '' });
-                  // Auto-set end date if not set
-                  if (!endDate) setEndDate(e.target.value);
-                }}
-                disabled={loading}
-                className={errors.startDate ? 'border-error-solid' : ''}
-              />
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={`w-full justify-start text-left font-normal ${
+                      !startDate && 'text-muted-foreground'
+                    } ${errors.startDate ? 'border-error-solid' : ''}`}
+                    disabled={loading}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {startDate ? format(startDate, 'PPP') : 'Pick a date'}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0 glassmorphism border-border" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={startDate}
+                    onSelect={(date) => {
+                      setStartDate(date);
+                      if (errors.startDate) setErrors({ ...errors, startDate: '' });
+                      // Auto-set end date if not set
+                      if (!endDate && date) setEndDate(date);
+                    }}
+                    disabled={loading}
+                    initialFocus
+                  />
+                </PopoverContent>
+              </Popover>
               {errors.startDate && (
                 <p className="text-sm text-error-solid flex items-center gap-1">
                   <AlertCircle className="w-3 h-3" />
@@ -337,74 +342,41 @@ export function AddEventDialog({ onEventCreated, defaultDate, triggerButton }: A
               )}
             </div>
 
+            {/* End Date */}
             <div className="space-y-2">
-              <Label htmlFor="start-time">
-                Start Time <span className="text-error-solid">*</span>
-              </Label>
-              <Input
-                id="start-time"
-                type="time"
-                value={startTime}
-                onChange={(e) => {
-                  setStartTime(e.target.value);
-                  if (errors.startTime) setErrors({ ...errors, startTime: '' });
-                }}
-                disabled={loading}
-                className={errors.startTime ? 'border-error-solid' : ''}
-              />
-              {errors.startTime && (
-                <p className="text-sm text-error-solid flex items-center gap-1">
-                  <AlertCircle className="w-3 h-3" />
-                  {errors.startTime}
-                </p>
-              )}
-            </div>
-          </div>
-
-          {/* End Date & Time */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="end-date">
+              <Label>
                 End Date <span className="text-error-solid">*</span>
               </Label>
-              <Input
-                id="end-date"
-                type="date"
-                value={endDate}
-                onChange={(e) => {
-                  setEndDate(e.target.value);
-                  if (errors.endDate) setErrors({ ...errors, endDate: '' });
-                }}
-                disabled={loading}
-                className={errors.endDate ? 'border-error-solid' : ''}
-              />
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={`w-full justify-start text-left font-normal ${
+                      !endDate && 'text-muted-foreground'
+                    } ${errors.endDate ? 'border-error-solid' : ''}`}
+                    disabled={loading}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {endDate ? format(endDate, 'PPP') : 'Pick a date'}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0 glassmorphism border-border" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={endDate}
+                    onSelect={(date) => {
+                      setEndDate(date);
+                      if (errors.endDate) setErrors({ ...errors, endDate: '' });
+                    }}
+                    disabled={loading}
+                    initialFocus
+                  />
+                </PopoverContent>
+              </Popover>
               {errors.endDate && (
                 <p className="text-sm text-error-solid flex items-center gap-1">
                   <AlertCircle className="w-3 h-3" />
                   {errors.endDate}
-                </p>
-              )}
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="end-time">
-                End Time <span className="text-error-solid">*</span>
-              </Label>
-              <Input
-                id="end-time"
-                type="time"
-                value={endTime}
-                onChange={(e) => {
-                  setEndTime(e.target.value);
-                  if (errors.endTime) setErrors({ ...errors, endTime: '' });
-                }}
-                disabled={loading}
-                className={errors.endTime ? 'border-error-solid' : ''}
-              />
-              {errors.endTime && (
-                <p className="text-sm text-error-solid flex items-center gap-1">
-                  <AlertCircle className="w-3 h-3" />
-                  {errors.endTime}
                 </p>
               )}
             </div>

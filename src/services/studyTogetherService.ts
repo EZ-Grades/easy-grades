@@ -7,24 +7,27 @@ import { supabase } from '../lib/supabase';
 export interface StudyRoom {
   id: string;
   name: string;
-  description?: string;
-  room_code: string;
-  host_user_id: string;
+  description?: string | null;
+  room_code?: string;
+  created_by: string;
   max_participants: number;
-  is_public: boolean;
-  password_hash?: string;
-  theme: string;
+  visibility: 'public' | 'private' | 'friends_only';
+  password_hash?: string | null;
+  theme?: string;
   is_active: boolean;
   created_at: string;
   updated_at: string;
+  closed_at?: string | null;
   // Joined data
   host?: {
     id: string;
-    full_name?: string;
+    full_name?: string | null;
     email: string;
-    username?: string;
+    username?: string | null;
   };
   participant_count?: number;
+  // Backward compatibility
+  is_public?: boolean; // Map from visibility
 }
 
 export interface RoomParticipant {
@@ -32,18 +35,20 @@ export interface RoomParticipant {
   room_id: string;
   user_id: string;
   joined_at: string;
-  left_at?: string;
-  is_online: boolean;
-  status: 'studying' | 'break' | 'away';
+  left_at?: string | null;
+  status: 'online' | 'away' | 'studying' | 'break' | 'offline';
   study_time_minutes: number;
+  last_seen_at: string;
   // Joined data
   user?: {
     id: string;
-    full_name?: string;
+    full_name?: string | null;
     email: string;
-    username?: string;
-    avatar_url?: string;
+    username?: string | null;
+    avatar_url?: string | null;
   };
+  // Backward compatibility
+  is_online?: boolean; // Computed from status
 }
 
 export interface RoomSession {
@@ -97,12 +102,12 @@ export interface CanvasSession {
 // ==========================================
 
 /**
- * Generate a unique 6-character room code
+ * Generate a unique 8-character room code (new schema requires 8 chars)
  */
 function generateRoomCode(): string {
   const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
   let code = '';
-  for (let i = 0; i < 6; i++) {
+  for (let i = 0; i < 8; i++) {
     code += chars.charAt(Math.floor(Math.random() * chars.length));
   }
   return code;
@@ -134,11 +139,10 @@ export async function createRoom(params: {
       .insert({
         name: params.name,
         description: params.description,
+        created_by: user.id,
         room_code: roomCode,
-        host_user_id: user.id,
-        is_public: params.isPublic,
+        visibility: params.isPublic ? 'public' : 'private',
         password_hash: params.password, // TODO: Hash the password in production
-        theme: params.theme || 'forest',
         is_active: true,
       })
       .select()
@@ -176,14 +180,14 @@ export async function getRooms(options: {
       .select(
         `
         *,
-        host:profiles!study_rooms_host_user_id_fkey(id, full_name, email, username)
+        host:profiles!study_rooms_created_by_fkey(id, full_name, email, username)
       `
       )
       .eq('is_active', true)
       .order('created_at', { ascending: false });
 
     if (options.publicOnly) {
-      query = query.eq('is_public', true);
+      query = query.eq('visibility', 'public');
     }
 
     if (options.limit) {
@@ -232,7 +236,7 @@ export async function getRoom(
       .select(
         `
         *,
-        host:profiles!study_rooms_host_user_id_fkey(id, full_name, email, username)
+        host:profiles!study_rooms_created_by_fkey(id, full_name, email, username)
       `
       )
       .eq('id', roomId)
@@ -262,10 +266,11 @@ export async function getRoomByCode(
       .select(
         `
         *,
-        host:profiles!study_rooms_host_user_id_fkey(id, full_name, email, username)
+        host:profiles!study_rooms_created_by_fkey(id, full_name, email, username)
       `
       )
-      .eq('room_code', roomCode.toUpperCase())
+      .eq('room_code', roomCode)
+      .eq('is_active', true)
       .single();
 
     if (error) {
@@ -651,7 +656,7 @@ export async function sendChatMessage(
     }
 
     const { data, error } = await supabase
-      .from('room_chat_messages')
+      .from('room_messages')
       .insert({
         room_id: roomId,
         user_id: user.id,
@@ -682,11 +687,11 @@ export async function getChatMessages(
 ): Promise<{ data: ChatMessage[] | null; error: Error | null }> {
   try {
     const { data, error } = await supabase
-      .from('room_chat_messages')
+      .from('room_messages')
       .select(
         `
         *,
-        user:profiles!room_chat_messages_user_id_fkey(full_name, username)
+        user:profiles!room_messages_user_id_fkey(full_name, username)
       `
       )
       .eq('room_id', roomId)
@@ -976,7 +981,7 @@ export function subscribeToRoom(
         {
           event: 'INSERT',
           schema: 'public',
-          table: 'room_chat_messages',
+          table: 'room_messages',
           filter: `room_id=eq.${roomId}`,
         },
         callbacks.onChatMessage

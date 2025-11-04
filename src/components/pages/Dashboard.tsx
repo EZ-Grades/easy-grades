@@ -1,15 +1,15 @@
 import React, { useState, useEffect } from 'react';
-import { CheckSquare, BookOpen, Target, Clock, TrendingUp, Plus, Play, Pause, Timer, Flame } from 'lucide-react';
+import { CheckSquare, BookOpen, Target, Clock, TrendingUp, Plus, Play, Pause, Timer, Flame, RotateCcw } from 'lucide-react';
 import { motion } from 'motion/react';
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/card"
 import { Button } from "../ui/button"
-import { Progress } from "../ui/progress"
 import { toast } from 'sonner@2.0.3';
 import { DailyInspiration } from '../DailyInspiration';
 import { DrawingCanvas } from '../features/DrawingCanvas';
 import { AdvancedCalendar } from '../AdvancedCalendar';
 import { AddTaskDialog } from '../AddTaskDialog';
 import { AddNoteDialog } from '../AddNoteDialog';
+import { ProgressRing } from '../ProgressRing';
 import backendService from '../../services/backendService';
 
 interface Task {
@@ -215,15 +215,17 @@ export function Dashboard({ user }: DashboardProps) {
     if (user) {
       // LOGGED-IN USER - Update backend
       try {
-        const result = await backendService.tasks.updateTaskCompletion(taskId, !task.completed);
-        if (result.success) {
+        const { data, error } = await backendService.tasks.toggleTaskCompletion(taskId, !task.completed);
+        if (error) {
+          throw error;
+        }
+        
+        if (data) {
           // Update UI
           setTasks(tasks.map(t => 
             t.id === taskId ? { ...t, completed: !t.completed } : t
           ));
           toast.success(task.completed ? 'Task marked as incomplete 🔁' : 'Task completed! ✅');
-        } else {
-          toast.error('Failed to update task');
         }
       } catch (error) {
         console.error('Error updating task:', error);
@@ -257,149 +259,146 @@ export function Dashboard({ user }: DashboardProps) {
     <div className="p-6 space-y-6">
       {/* Welcome Header */}
       <motion.div 
-        initial={{ opacity: 0, y: 20 }}
+        initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.6 }}
-        className="text-center mb-8"
+        transition={{ duration: 0.4 }}
+        className="mb-8"
       >
-        <div className="flex items-center justify-center gap-3 mb-2">
-          <h1 className="text-5xl font-bold text-gradient-primary">
-            Welcome back{user ? `, ${user.full_name?.split(' ')[0] || user.email?.split('@')[0]}` : ''}!
-          </h1>
-        </div>
-        <p className="text-lg text-muted-foreground">
-          Ready to make today productive? Let's continue your learning journey.
+        <h1 className="text-2xl mb-1 text-gradient-primary">
+          Welcome back{user ? `, ${user.full_name?.split(' ')[0] || user.email?.split('@')[0]}` : ''}
+        </h1>
+        <p className="text-sm text-muted-foreground">
+          {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
         </p>
-      </motion.div>
+              </motion.div>
 
       {/* Stats - Only show for logged-in users */}
       {user && (
         <motion.div 
-          initial={{ opacity: 0, y: 20 }}
+          initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.2 }}
-          className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8"
+          transition={{ duration: 0.4, delay: 0.1 }}
+          className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8"
         >
           {/* Current Streak */}
-          <motion.div
-            whileHover={{ scale: 1.05, y: -4 }}
-            transition={{ duration: 0.3 }}
-          >
-            <Card className="glassmorphism border-0 hover:glow-highlight transition-all">
-              <CardContent className="p-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm text-muted-foreground">Streak Days</p>
-                    <p className="text-3xl font-bold text-gradient-highlight">{currentStreak} days</p>
-                  </div>
-                  <div className="relative">
-                    <Flame className="w-10 h-10 text-orange-500" />
-                    {currentStreak > 0 && (
-                      <motion.div
-                        animate={{ scale: [1, 1.2, 1] }}
-                        transition={{ duration: 2, repeat: Infinity }}
-                        className="absolute -top-1 -right-1 w-3 h-3 bg-orange-500 rounded-full"
-                      />
-                    )}
-                  </div>
+          <Card className="glass-card-enhanced overflow-hidden">
+            <CardContent className="p-4">
+              <div className="flex items-start justify-between">
+                <div>
+                  <p className="text-xs text-muted-foreground mb-1">Streak</p>
+                  <p className="text-2xl font-medium text-gradient-highlight">{currentStreak}</p>
+                  <p className="text-xs text-muted-foreground">days</p>
                 </div>
-              </CardContent>
-            </Card>
-          </motion.div>
+                <div className="p-2 rounded-lg bg-gradient-to-br from-orange-100 to-red-100 dark:from-orange-900/30 dark:to-red-900/30">
+                  <Flame className="w-5 h-5 text-orange-600 dark:text-orange-400" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
 
           {/* Focus Hours */}
-          <motion.div
-            whileHover={{ scale: 1.05, y: -4 }}
-            transition={{ duration: 0.3 }}
-          >
-            <Card className="glassmorphism border-0 hover:glow-primary transition-all">
-              <CardContent className="p-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm text-muted-foreground">Focus Hours</p>
-                    <p className="text-3xl font-bold text-gradient-primary">{focusHours}h</p>
-                  </div>
-                  <Clock className="w-10 h-10 text-blue-600" />
+          <Card className="glass-card-enhanced overflow-hidden">
+            <CardContent className="p-4">
+              <div className="flex items-start justify-between">
+                <div>
+                  <p className="text-xs text-muted-foreground mb-1">Focus</p>
+                  <p className="text-2xl font-medium text-gradient-primary">{focusHours}</p>
+                  <p className="text-xs text-muted-foreground">hours</p>
                 </div>
-              </CardContent>
-            </Card>
-          </motion.div>
+                <div className="p-2 rounded-lg gradient-primary">
+                  <Clock className="w-5 h-5 text-white" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
 
           {/* Completed Tasks */}
-          <motion.div
-            whileHover={{ scale: 1.05, y: -4 }}
-            transition={{ duration: 0.3 }}
-          >
-            <Card className="glassmorphism border-0 hover:glow-secondary transition-all">
-              <CardContent className="p-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm text-muted-foreground">Completed Tasks</p>
-                    <p className="text-3xl font-bold text-gradient-secondary">{completedTasks}/{totalTasks}</p>
-                  </div>
-                  <CheckSquare className="w-10 h-10 text-green-600" />
+          <Card className="glass-card-enhanced overflow-hidden">
+            <CardContent className="p-4">
+              <div className="flex items-start justify-between">
+                <div>
+                  <p className="text-xs text-muted-foreground mb-1">Tasks</p>
+                  <p className="text-2xl font-medium text-gradient-primary">{completedTasks}/{totalTasks}</p>
+                  <p className="text-xs text-muted-foreground">done</p>
                 </div>
-              </CardContent>
-            </Card>
-          </motion.div>
+                <div className="p-2 rounded-lg bg-gradient-to-br from-green-100 to-emerald-100 dark:from-green-900/30 dark:to-emerald-900/30">
+                  <CheckSquare className="w-5 h-5 text-green-600 dark:text-green-400" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
 
           {/* Study Sessions */}
-          <motion.div
-            whileHover={{ scale: 1.05, y: -4 }}
-            transition={{ duration: 0.3 }}
-          >
-            <Card className="glassmorphism border-0 hover:glow-primary transition-all">
-              <CardContent className="p-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm text-muted-foreground">Study Sessions</p>
-                    <p className="text-3xl font-bold text-gradient-primary">{completedSessions}</p>
-                  </div>
-                  <Target className="w-10 h-10 text-purple-600" />
+          <Card className="glass-card-enhanced overflow-hidden">
+            <CardContent className="p-4">
+              <div className="flex items-start justify-between">
+                <div>
+                  <p className="text-xs text-muted-foreground mb-1">Sessions</p>
+                  <p className="text-2xl font-medium text-gradient-secondary">{completedSessions}</p>
+                  <p className="text-xs text-muted-foreground">total</p>
                 </div>
-              </CardContent>
-            </Card>
-          </motion.div>
+                <div className="p-2 rounded-lg gradient-secondary">
+                  <Target className="w-5 h-5 text-white" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
         </motion.div>
       )}
 
       {/* Main Content Grid - Timer, Tasks, Notes */}
       <motion.div 
-        initial={{ opacity: 0, y: 20 }}
+        initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.6, delay: 0.3 }}
-        className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 mb-8"
+        transition={{ duration: 0.4, delay: 0.2 }}
+        className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 mb-8"
       >
         {/* Focus Timer */}
-        <Card className="glassmorphism border-0 flex flex-col">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Timer className="w-5 h-5" />
-              Focus Timer
+        <Card className="glass-card-enhanced flex flex-col">
+          <CardHeader className="pb-3">
+            <CardTitle className="flex items-center gap-2 text-base">
+              <div className="p-1.5 rounded-md gradient-primary">
+                <Timer className="w-4 h-4 text-white" />
+              </div>
+              <span className="text-xl text-gradient-primary">Focus Timer</span>
             </CardTitle>
           </CardHeader>
-          <CardContent className="flex-1 flex flex-col justify-center">
-            <div className="text-center space-y-6">
-              <div className="text-7xl font-mono font-bold text-gradient-primary">
-                {String(timerMinutes).padStart(2, '0')}:{String(timerSeconds).padStart(2, '0')}
+          <CardContent className="flex-1 flex flex-col justify-center items-center pt-2">
+            <div className="text-center w-full">
+              {/* Minimal Circle Timer */}
+              <div className="mb-6 flex justify-center">
+                <ProgressRing 
+                  progress={((25 * 60) - (timerMinutes * 60 + timerSeconds)) / (25 * 60) * 100} 
+                  size={160} 
+                  strokeWidth={6}
+                  gradient="primary"
+                >
+                  <div className="text-center">
+                    <div className="text-3xl mb-1 font-mono text-foreground tabular-nums">
+                      {String(timerMinutes).padStart(2, '0')}:{String(timerSeconds).padStart(2, '0')}
+                    </div>
+                    <div className="text-xs text-muted-foreground font-normal">
+                      {isTimerRunning ? 'Focusing' : 'Ready'}
+                    </div>
+                  </div>
+                </ProgressRing>
               </div>
-              <Progress 
-                value={((25 * 60) - (timerMinutes * 60 + timerSeconds)) / (25 * 60) * 100} 
-                className="h-3" 
-              />
-              <div className="flex justify-center gap-3">
+              
+              {/* Action Buttons */}
+              <div className="flex justify-center gap-2">
                 {!isTimerRunning ? (
-                  <Button onClick={startTimer} className="gradient-primary">
-                    <Play className="w-4 h-4 mr-2" />
+                  <Button onClick={startTimer} size="sm" className="gradient-primary text-white">
+                    <Play className="w-3.5 h-3.5 mr-1.5" />
                     Start
                   </Button>
                 ) : (
-                  <Button onClick={pauseTimer} variant="outline">
-                    <Pause className="w-4 h-4 mr-2" />
+                  <Button onClick={pauseTimer} size="sm" variant="outline">
+                    <Pause className="w-3.5 h-3.5 mr-1.5" />
                     Pause
                   </Button>
                 )}
-                <Button onClick={resetTimer} variant="outline">
+                <Button onClick={resetTimer} size="sm" variant="ghost">
+                  <RotateCcw className="w-3.5 h-3.5 mr-1.5" />
                   Reset
                 </Button>
               </div>
@@ -408,54 +407,58 @@ export function Dashboard({ user }: DashboardProps) {
         </Card>
 
         {/* Tasks */}
-        <Card className="glassmorphism border-0 flex flex-col">
-          <CardHeader>
-            <CardTitle className="flex items-center justify-between">
+        <Card className="glass-card-enhanced flex flex-col">
+          <CardHeader className="pb-3">
+            <CardTitle className="flex items-center justify-between text-base">
               <div className="flex items-center gap-2">
-                <CheckSquare className="w-5 h-5" />
-                Tasks ({tasks.filter(t => !t.completed).length} pending)
+                <div className="p-1.5 rounded-md bg-gradient-to-br from-green-100 to-emerald-100 dark:from-green-900/30 dark:to-emerald-900/30">
+                  <CheckSquare className="w-4 h-4 text-green-600 dark:text-green-400" />
+                </div>
+                <span className="text-xl text-gradient-primary">Tasks</span>
               </div>
+              <span className="text-xs font-normal text-muted-foreground">
+                {tasks.filter(t => !t.completed).length} pending
+              </span>
             </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4 flex-1 flex flex-col">
+          <CardContent className="space-y-3 flex-1 flex flex-col pt-2">
             <AddTaskDialog 
               userId={user?.id} 
               onTaskAdded={handleTaskAdded}
             />
             
-            <div className="space-y-2 max-h-72 overflow-y-auto pr-2">
+            <div className="space-y-1.5 max-h-72 overflow-y-auto">
               {tasks.length > 0 ? (
                 tasks.map((task) => (
                   <motion.div
                     key={task.id}
-                    initial={{ opacity: 0, x: -20 }}
+                    initial={{ opacity: 0, x: -10 }}
                     animate={{ opacity: 1, x: 0 }}
-                    className={`flex items-center gap-3 p-3 rounded-lg border transition-all ${
+                    className={`flex items-center gap-2.5 p-2.5 rounded-lg border transition-all ${
                       task.completed 
-                        ? 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800' 
-                        : 'bg-white/50 dark:bg-white/5 border-border hover:bg-white/70 dark:hover:bg-white/10'
+                        ? 'bg-muted/30 border-border/50 opacity-60' 
+                        : 'glass-card hover:border-primary/50 hover:shadow-lg'
                     }`}
                   >
                     <button
                       onClick={() => toggleTask(task.id)}
-                      className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-all ${
+                      className={`w-4 h-4 rounded border-2 flex items-center justify-center transition-all flex-shrink-0 ${
                         task.completed
-                          ? 'bg-green-500 border-green-500 text-white'
-                          : 'border-gray-300 hover:border-green-400'
+                          ? 'bg-primary border-primary'
+                          : 'border-muted-foreground/30 hover:border-primary'
                       }`}
                     >
-                      {task.completed && <CheckSquare className="w-3 h-3" />}
+                      {task.completed && <CheckSquare className="w-2.5 h-2.5 text-white" />}
                     </button>
-                    <span className={`flex-1 ${task.completed ? 'line-through text-muted-foreground' : ''}`}>
+                    <span className={`flex-1 text-sm ${task.completed ? 'line-through text-muted-foreground' : ''}`}>
                       {task.title}
                     </span>
                   </motion.div>
                 ))
               ) : (
-                <div className="text-center py-8 text-muted-foreground">
-                  <CheckSquare className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                  <p>No tasks yet</p>
-                  <p className="text-sm mt-2">Add your first task!</p>
+                <div className="text-center py-12 text-muted-foreground">
+                  <CheckSquare className="w-8 h-8 mx-auto mb-2 opacity-30" />
+                  <p className="text-xs">No tasks yet</p>
                 </div>
               )}
             </div>
@@ -463,37 +466,38 @@ export function Dashboard({ user }: DashboardProps) {
         </Card>
 
         {/* Notes */}
-        <Card className="glassmorphism border-0 flex flex-col">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <BookOpen className="w-5 h-5" />
-              Quick Notes
+        <Card className="glass-card-enhanced flex flex-col">
+          <CardHeader className="pb-3">
+            <CardTitle className="flex items-center gap-2 text-base">
+              <div className="p-1.5 rounded-md gradient-highlight">
+                <BookOpen className="w-4 h-4 text-white" />
+              </div>
+              <span className="text-xl text-gradient-highlight">Quick Notes</span>
             </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4 flex-1 flex flex-col">
+          <CardContent className="space-y-3 flex-1 flex flex-col pt-2">
             <AddNoteDialog 
               userId={user?.id} 
               onNoteAdded={handleNoteAdded}
             />
             
-            <div className="space-y-2 max-h-72 overflow-y-auto pr-2">
+            <div className="space-y-1.5 max-h-72 overflow-y-auto">
               {notes.length > 0 ? (
                 notes.map((note) => (
                   <motion.div
                     key={note.id}
-                    initial={{ opacity: 0, x: -20 }}
+                    initial={{ opacity: 0, x: -10 }}
                     animate={{ opacity: 1, x: 0 }}
-                    className="p-3 rounded-lg bg-white/50 dark:bg-white/5 border border-border hover:bg-white/70 dark:hover:bg-white/10 transition-all"
+                    className="p-2.5 rounded-lg glass-card hover:border-primary/50 hover:shadow-lg transition-all"
                   >
-                    <h4 className="font-medium mb-1">{note.title}</h4>
-                    <p className="text-sm text-muted-foreground line-clamp-2">{note.content}</p>
+                    <h4 className="text-sm font-medium mb-0.5">{note.title}</h4>
+                    <p className="text-xs text-muted-foreground line-clamp-2">{note.content}</p>
                   </motion.div>
                 ))
               ) : (
-                <div className="text-center py-8 text-muted-foreground">
-                  <BookOpen className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                  <p>No notes yet</p>
-                  <p className="text-sm mt-2">Create your first note!</p>
+                <div className="text-center py-12 text-muted-foreground">
+                  <BookOpen className="w-8 h-8 mx-auto mb-2 opacity-30" />
+                  <p className="text-xs">No notes yet</p>
                 </div>
               )}
             </div>
@@ -501,34 +505,22 @@ export function Dashboard({ user }: DashboardProps) {
         </Card>
       </motion.div>
 
-      {/* 6. Calendar & Drawing Canvas */}
+      {/* Calendar & Drawing Canvas */}
       <motion.div 
-        initial={{ opacity: 0, y: 20 }}
+        initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.6, delay: 0.4 }}
-        className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8"
+        transition={{ duration: 0.4, delay: 0.3 }}
+        className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-8"
       >
-        {/* Calendar - Create events, mark sessions */}
-        <div className="flex justify-center">
-          <div className="w-full max-w-2xl">
-            <AdvancedCalendar />
-          </div>
-        </div>
-
-        {/* Drawing Canvas - Edit canvas, save/export */}
-        <div className="flex justify-center">
-          <div className="w-full max-w-2xl">
-            <DrawingCanvas width={672} height={550} />
-          </div>
-        </div>
+        <AdvancedCalendar />
+        <DrawingCanvas width={672} height={550} />
       </motion.div>
 
-      {/* 9. Daily Inspiration - Fetch and display quote */}
+      {/* Daily Inspiration */}
       <motion.div
-        initial={{ opacity: 0, y: 20 }}
+        initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.6, delay: 0.5 }}
-        className="mt-8"
+        transition={{ duration: 0.4, delay: 0.4 }}
       >
         <DailyInspiration />
       </motion.div>

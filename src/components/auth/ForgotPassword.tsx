@@ -25,8 +25,13 @@ export function ForgotPassword({ onBackToLogin }: ForgotPasswordProps) {
     setError(null);
 
     try {
+      // Use a more specific redirect URL that works with hash-based routing
+      const redirectUrl = `${window.location.origin}/#type=recovery`;
+      console.log('🔐 Sending password reset email to:', email);
+      console.log('🔗 Redirect URL:', redirectUrl);
+      
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/reset-password`
+        redirectTo: redirectUrl
       });
 
       if (error) {
@@ -186,7 +191,7 @@ export function ForgotPassword({ onBackToLogin }: ForgotPasswordProps) {
           >
             <button
               onClick={onBackToLogin}
-              className="text-muted-foreground hover:text-foreground transition-colors inline-flex items-center gap-2"
+              className="text-muted-foreground hover:text-foreground transition-colors inline-flex items-center gap-2 cursor-pointer"
             >
               <ArrowLeft className="w-4 h-4" />
               Back to Sign In

@@ -28,14 +28,14 @@ export function CollaborativeCanvas({
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [isDrawing, setIsDrawing] = useState(false);
   const [brushSize, setBrushSize] = useState(5);
-  const [selectedColor, setSelectedColor] = useState('#7D4AE1');
+  const [selectedColor, setSelectedColor] = useState('#6BA5AF');
   const [strokes, setStrokes] = useState<DrawingStroke[]>([]);
   const [currentStroke, setCurrentStroke] = useState<DrawingStroke | null>(null);
 
   const colors = [
-    '#7D4AE1', // Primary purple
-    '#3AB0A0', // Secondary teal
-    '#FFCB6B', // Highlight yellow
+    '#6BA5AF', // Primary teal
+    '#2C4A6C', // Secondary navy
+    '#7CB3BD', // Highlight teal
     '#E76F51', // Error red
     '#000000', // Black
     '#FFFFFF', // White

@@ -95,7 +95,7 @@ export function DailyInspiration({ className, showIcon = true }: DailyInspiratio
             
             <blockquote className="relative pl-6">
               <p className="text-lg italic leading-relaxed">
-                "{inspiration.text}"
+                "{inspiration.content}"
               </p>
               
               {inspiration.author && (
@@ -119,7 +119,8 @@ export function DailyInspiration({ className, showIcon = true }: DailyInspiratio
               </div>
             </div>
           )}
-        </CardContent>
+
+                  </CardContent>
       </Card>
     </motion.div>
   );

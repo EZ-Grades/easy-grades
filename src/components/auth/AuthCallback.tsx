@@ -12,26 +12,43 @@ export function AuthCallback({ onAuthComplete }: AuthCallbackProps) {
   useEffect(() => {
     const handleAuthCallback = async () => {
       try {
-        console.log('🔐 Processing OAuth callback...')
+        // Check URL for auth type
+        const hashParams = new URLSearchParams(window.location.hash.substring(1))
+        const type = hashParams.get('type')
+        const accessToken = hashParams.get('access_token')
+        
+        if (type === 'signup' || type === 'email') {
+          console.log('📧 Processing email verification...')
+        } else if (accessToken) {
+          console.log('🔐 Processing OAuth callback...')
+        } else {
+          console.log('🔐 Processing authentication callback...')
+        }
         
         // Get the session from the URL parameters
         const { data, error } = await supabase.auth.getSession()
         
         if (error) {
-          console.error('Error in auth callback:', error)
+          console.error('❌ Error in auth callback:', error)
           onAuthComplete(false, error.message)
           return
         }
 
         if (data.session) {
-          console.log('✅ OAuth authentication successful')
+          // Check if this is email verification
+          if (type === 'signup' || type === 'email') {
+            console.log('✅ Email verified successfully!')
+            // Profile will be created by database trigger or on first data fetch
+          } else {
+            console.log('✅ OAuth authentication successful')
+          }
           onAuthComplete(true)
         } else {
-          console.log('❌ No session found in OAuth callback')
+          console.log('❌ No session found in auth callback')
           onAuthComplete(false, 'Authentication failed - no session created')
         }
       } catch (err) {
-        console.error('Unexpected error in auth callback:', err)
+        console.error('❌ Unexpected error in auth callback:', err)
         onAuthComplete(false, 'Authentication failed - unexpected error')
       }
     }

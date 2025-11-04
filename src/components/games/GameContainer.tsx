@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { X, RotateCcw, Home } from 'lucide-react';
 import { Button } from '../ui/button';
@@ -43,6 +43,19 @@ export function GameContainer({ gameType, onClose }: GameContainerProps) {
   const [gameKey, setGameKey] = useState(0); // Key to force game remount
   
   const info = gameInfo[gameType];
+
+  // Auto-restart game immediately after completion
+  useEffect(() => {
+    if (gameState === 'completed') {
+      // Restart the game immediately
+      const timer = setTimeout(() => {
+        setGameState('playing');
+        setGameKey(prev => prev + 1);
+      }, 100); // Minimal delay for smooth transition
+      
+      return () => clearTimeout(timer);
+    }
+  }, [gameState]);
 
   const handleExit = () => {
     if (gameState === 'playing') {
@@ -177,7 +190,7 @@ export function GameContainer({ gameType, onClose }: GameContainerProps) {
                     Continue Playing
                   </Button>
                   <Button
-                    variant="default"
+                    variant="destructive"
                     onClick={confirmExit}
                     className="flex-1"
                   >

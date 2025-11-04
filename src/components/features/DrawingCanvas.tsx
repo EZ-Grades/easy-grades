@@ -236,10 +236,6 @@ export function DrawingCanvas({ width = 400, height = 300 }: DrawingCanvasProps)
             style={{ maxWidth: '100%', height: 'auto', backgroundColor: '#FFFFFF' }}
           />
         </div>
-
-        <p className="text-xs text-muted-foreground text-center italic">
-          ✨ Express your creativity with soft pastel colors ✨
-        </p>
       </CardContent>
     </Card>
   );

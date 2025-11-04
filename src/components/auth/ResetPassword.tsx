@@ -269,7 +269,7 @@ export function ResetPassword({ onComplete, onBackToLogin }: ResetPasswordProps)
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
                 >
                   {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
@@ -296,7 +296,7 @@ export function ResetPassword({ onComplete, onBackToLogin }: ResetPasswordProps)
                 <button
                   type="button"
                   onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
                 >
                   {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
@@ -357,7 +357,7 @@ export function ResetPassword({ onComplete, onBackToLogin }: ResetPasswordProps)
           >
             <button
               onClick={onBackToLogin}
-              className="text-muted-foreground hover:text-foreground transition-colors inline-flex items-center gap-2"
+              className="text-muted-foreground hover:text-foreground transition-colors inline-flex items-center gap-2 cursor-pointer"
             >
               <ArrowLeft className="w-4 h-4" />
               Back to Sign In
