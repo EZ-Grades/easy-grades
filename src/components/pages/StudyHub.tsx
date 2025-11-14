@@ -63,7 +63,6 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Label } from "../ui/label";
 import { toast } from 'sonner@2.0.3';
 import { AIStudyHelper } from '../AIStudyHelper';
-import { SetupGuide } from '../SetupGuide';
 
 interface StudyHubProps {
   user?: any;
@@ -912,9 +911,7 @@ export function StudyHub({ user }: StudyHubProps) {
   return (
     <div className="min-h-screen pb-8 px-6 pt-8">
       <div className="max-w-7xl mx-auto space-y-8">
-        {/* Setup Guide - Shows if API not configured */}
-        <SetupGuide />
-        
+             
         {/* Header */}
         <motion.div
           initial={{ opacity: 0, y: -20 }}

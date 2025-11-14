@@ -159,7 +159,7 @@ export function useAuth() {
             full_name: fullName,
             username: fullName.split(' ')[0] || 'Scholar'
           },
-          emailRedirectTo: `${window.location.origin}/auth/callback`
+emailRedirectTo: `${window.location.origin}/easy-grades/auth/callback`
         }
       })
 
@@ -260,7 +260,7 @@ export function useAuth() {
       setLoading(true)
       setError(null)
       
-      const redirectUrl = window.location.origin;
+     const redirectUrl = `${window.location.origin}/easy-grades/`;
       console.log('🔐 Initiating Google OAuth...');
       console.log('🔗 OAuth redirect URL:', redirectUrl);
 
@@ -357,8 +357,9 @@ export function useAuth() {
       setError(null)
 
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/reset-password`
-      })
+  redirectTo: `${window.location.origin}/easy-grades/reset-password`
+});
+
 
       if (error) {
         setError(error.message)

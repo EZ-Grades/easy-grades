@@ -220,40 +220,53 @@ export function useAIChat() {
     }
   }
 
-  // Mock AI service call - replace with actual AI integration
+  // AI service call using Perplexity API
   const callAIService = async (message: string, contextType: string): Promise<string> => {
-    // This is a mock implementation. Replace with actual AI service calls
-    // You might use OpenAI, Anthropic, or your preferred AI service here
-    
-    await new Promise(resolve => setTimeout(resolve, 1000)) // Simulate API delay
-    
-    const responses = {
-      general: [
-        "I understand you're looking for help. Could you provide more details about what you need assistance with?",
-        "That's an interesting question! Let me help you work through this step by step.",
-        "I'm here to help you with your studies. What specific topic would you like to explore?"
-      ],
-      study_help: [
-        "Let's break this down into manageable parts. What subject are you studying?",
-        "Great question! This topic requires understanding the fundamentals first. Let me explain...",
-        "I can help you understand this concept better. What part is giving you trouble?"
-      ],
-      course_specific: [
-        "For this course material, let's focus on the key concepts you need to master.",
-        "This is a common challenge in this subject. Here's how to approach it...",
-        "Let me help you connect this concept to what you've already learned."
-      ],
-      homework_help: [
-        "I can guide you through this problem. Let's start by identifying what we know.",
-        "Rather than giving you the answer, let me help you understand the process.",
-        "This type of question requires a specific approach. Here's how to think about it..."
-      ]
+    try {
+      // Dynamically import the Perplexity service
+      const { getStudyAssistance, isPerplexityConfigured } = await import('../services/perplexityService')
+      
+      // Check if Perplexity is configured
+      if (!isPerplexityConfigured()) {
+        throw new Error('AI service not configured. Please add VITE_PERPLEXITY_API_KEY to your environment variables.')
+      }
+
+      // Create context prompt based on type
+      const contextPrompts = {
+        general: 'You are a helpful study assistant. Answer questions clearly and provide actionable advice.',
+        study_help: 'You are a study coach helping students learn effectively. Break down complex topics and provide clear explanations.',
+        course_specific: 'You are an expert tutor for this specific course. Focus on course-related concepts and help students master the material.',
+        homework_help: 'You are a homework helper. Guide students through problems without giving direct answers. Help them understand the process.'
+      }
+      
+      const context = contextPrompts[contextType as keyof typeof contextPrompts] || contextPrompts.general
+      
+      // Get conversation history from current messages
+      const conversationHistory = messages
+        .slice(-5) // Only include last 5 messages for context
+        .map(msg => ({
+          role: msg.message_type === 'user' ? 'user' as const : 'assistant' as const,
+          content: msg.message_type === 'user' ? msg.message : msg.response
+        }))
+      
+      // Call Perplexity API
+      const { data, error } = await getStudyAssistance(message, context, conversationHistory)
+      
+      if (error || !data) {
+        throw new Error(error || 'Failed to get AI response')
+      }
+      
+      return data
+    } catch (error: any) {
+      console.error('Error calling AI service:', error)
+      
+      // Fallback to helpful error message
+      if (error.message.includes('not configured')) {
+        return "I'm currently unavailable because the AI service hasn't been configured yet. Please contact your administrator to set up the PERPLEXITY_API_KEY."
+      }
+      
+      return "I apologize, but I'm having trouble processing your request right now. Please try again in a moment."
     }
-    
-    const contextResponses = responses[contextType as keyof typeof responses] || responses.general
-    const randomResponse = contextResponses[Math.floor(Math.random() * contextResponses.length)]
-    
-    return randomResponse
   }
 
   useEffect(() => {
